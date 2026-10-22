@@ -113,7 +113,7 @@ function App() {
   return (
     <>
       <Routes>
-        {/* AUTH ROUTE- */}
+        {/* AUTH ROUTE */}
         <Route path="/" element={<LoginProtected><Login /></LoginProtected>} />
         <Route path="/forget" element={<LoginProtected><ForgetPassword /></LoginProtected>} />
         <Route path="/reset" element={<LoginProtected><ResetPassword /></LoginProtected>} />
