@@ -1,0 +1,35 @@
+@tailwind base;
+
+[type='text']:focus,
+[type='email']:focus,
+[type='url']:focus,
+[type='password']:focus,
+[type='number']:focus,
+[type='date']:focus,
+[type='datetime-local']:focus,
+[type='month']:focus,
+[type='search']:focus,
+[type='tel']:focus,
+[type='time']:focus,
+[type='week']:focus,
+[multiple]:focus,
+textarea:focus,
+select:focus {
+  --tw-ring-color: transparent;
+  box-shadow: none;
+  border-color: theme('colors.gray.300');
+}
+
+[type='checkbox'],
+[type='radio'] {
+  color: theme('colors.gray.700');
+}
+
+[type='checkbox']:focus,
+[type='radio']:focus {
+  --tw-ring-color: transparent;
+  box-shadow: none;
+}
+
+@tailwind components;
+@tailwind utilities;

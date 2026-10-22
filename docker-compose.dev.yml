@@ -1,0 +1,30 @@
+
+
+#services
+services:
+ #backend
+ backend:
+  build:
+   context: './backend'
+   dockerfile: Dockerfile
+  image: ${DOCKER_IMAGE_BACKEND}
+  container_name: naila-backend-${ENVIRONMENT}
+  ports:
+   - "${BACKEND_PORT}:5000"
+  env_file:
+   - .env.runtime
+  
+ #frontend
+ frontend:
+  build:
+   context: './frontend'
+   dockerfile: Dockerfile
+   args: 
+    API_URL: "${VITE_API_URL}"
+    APP_ENV: "${ENVIRONMENT}"
+  image: ${DOCKER_IMAGE_FRONTEND}
+  container_name: naila-frontend-${ENVIRONMENT}
+  ports:
+   - "${FRONTEND_PORT}:80"
+  depends_on:
+   - backend

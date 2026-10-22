@@ -1,0 +1,129 @@
+pipeline {
+    agent any
+    
+    tools {
+        nodejs 'Node_JS'   
+    }
+    
+    environment {
+        DOCKER_BUILDKIT = '1'
+        APP_NAME = 'naila-arts'
+    }
+    
+    stages {
+
+        stage('Set Environment') {
+            steps {
+                script {
+                    echo "Setting Environment"
+                   def branchName = env.GIT_BRANCH?.replace('origin/', '')
+                    echo "Branch name is: ${branchName}"
+                    if (branchName == 'main') {
+                        echo "Branch name: ${branchName}"
+                         env.ENVIRONMENT = 'prod'
+                         env.FRONTEND_PORT = '5173'
+                         env.BACKEND_PORT = '8000'
+                         env.VITE_API_URL = 'http://31.220.109.115:8000'
+                    } else if (branchName == 'develop') {
+                        echo "Branch name: ${branchName}"
+                         env.ENVIRONMENT = 'dev'
+                         env.FRONTEND_PORT = '3000'
+                         env.BACKEND_PORT = '8040'
+                         env.VITE_API_URL = 'http://31.220.109.115:8040'
+                    } else {
+                        error "Unrecognized branch: ${env.BRANCH_NAME}. Only 'develop' and 'main' are supported."
+                    }
+                    echo "Building for ${env.ENVIRONMENT} environment."
+                    env.DOCKER_IMAGE_FRONTEND = "${APP_NAME}:frontend-${env.ENVIRONMENT}-${BUILD_NUMBER}"
+                    env.DOCKER_IMAGE_BACKEND = "${APP_NAME}:backend-${env.ENVIRONMENT}-${BUILD_NUMBER}"
+                    echo "Frontend image to be configured: ${env.DOCKER_IMAGE_FRONTEND}"
+                    echo "Backend image to be configured: ${env.DOCKER_IMAGE_BACKEND}"
+                }
+            }
+        }
+
+        stage('Verify Prerequisites') {
+            steps {
+                script {
+                    sh '''                     
+                        
+                        # Ensure Docker daemon is running
+                        if ! docker info >/dev/null 2>&1; then
+                            echo "Docker daemon is not running. Please start Docker service."
+                            exit 1
+                        fi
+                        
+                        # Display versions for logging
+                        echo "Docker version:"
+                        docker --version
+                        
+                        echo "Node version:"
+                        node --version
+                        
+                        echo "NPM version:"
+                        npm --version
+                    '''
+                }
+            }
+        }
+
+
+
+stage('Docker compose') {
+    steps {
+        script {
+
+            def certId = (ENVIRONMENT == 'dev') ? 'NAILA_ENV_DEV_FILE' : 'NAILA_ENV_PROD_FILE'
+            withCredentials([[$class: 'FileBinding', credentialsId:certId, variable:'ENVFILE']]) {
+                 sh """
+
+                        echo "Stopping old containers"
+                        docker compose -p ${APP_NAME}-${ENVIRONMENT} -f ./docker-compose.${ENVIRONMENT}.yml down || true
+
+                        echo "Running new containers"
+                        export ENVIRONMENT=${ENVIRONMENT}
+                        export VITE_API_URL=${VITE_API_URL}
+                        export FRONTEND_PORT=${FRONTEND_PORT}
+                        export BACKEND_PORT=${BACKEND_PORT}
+                        export DOCKER_IMAGE_FRONTEND=${DOCKER_IMAGE_FRONTEND}
+                        export DOCKER_IMAGE_BACKEND=${DOCKER_IMAGE_BACKEND}
+
+                        cp "$ENVFILE" .env.runtime
+
+                        docker compose -p ${APP_NAME}-${ENVIRONMENT} --env-file .env.runtime -f ./docker-compose.${ENVIRONMENT}.yml up -d --force-recreate 
+
+                        echo "Restarting Nginx"
+                        sudo systemctl restart nginx
+                    
+                """
+            }              
+            }
+        }
+}
+
+
+
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            script {
+                sh """
+                    echo "Deployment successful"
+                    rm -f .env.runtime                 
+                """
+            }
+        }
+        failure {
+            script {
+                sh """
+                    echo "Deployment failed!"
+                    rm -f .env.runtime
+                """
+            }
+        }
+    }
+}

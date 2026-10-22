@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer; /* Changes the cursor to a pointer */
+}
+
+
+body {
+  font-family: "Poppins", sans-serif;
+}
+
+
+body {
+  --sb-track-color: #efefef;
+  --sb-thumb-color: #3c3c3c;
+  --sb-size: 8px;
+}
+
+body::-webkit-scrollbar {
+  width: var(--sb-size)
+}
+
+body::-webkit-scrollbar-track {
+  background: var(--sb-track-color);
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-color);
+  border-radius: 4px;
+  cursor: pointer;
+
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  body {
+    scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);
+  }
+}
+
+.scrollable-content {
+  overflow-y: auto; 
+}
+
+.scrollable-content::-webkit-scrollbar {
+  width: 8px; 
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background-color: black; 
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+  background-color: #333; 
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+  background-color: #f0f0f0; 
+  border-radius: 4px; 
+}
+
+
+/* Optionally, apply it to all focus events on inputs globally */
+.custom-search-box input:focus {
+
+  outline: none !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+}
+
+.custom-reactSelect input:focus {
+  outline: none !important;
+  border:none !important;
+  box-shadow: none !important;
+}
+
+.react-calendar__tile.mark-red {
+  background-color: red !important;
+  color: white !important;
+}

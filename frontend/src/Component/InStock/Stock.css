@@ -1,0 +1,75 @@
+
+/* Add this to your CSS file or style block */
+
+/* Badge styles */
+.animate-blink {
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
+  /* Button styles */
+  .relative {
+    position: relative;
+  }
+  
+  .absolute {
+    position: absolute;
+  }
+  
+  .top-0 {
+    top: 0;
+  }
+  
+  .right-0 {
+    right: 0;
+  }
+  
+  .inline-flex {
+    display: inline-flex;
+  }
+  
+  .items-center {
+    align-items: center;
+  }
+  
+  .justify-center {
+    justify-content: center;
+  }
+  
+  .w-6 {
+    width: 1.5rem; 
+  }
+  
+  .h-6 {
+    height: 1.5rem; 
+  }
+  
+  .text-xs {
+    font-size: 0.75rem; 
+  }
+  
+  .font-semibold {
+    font-weight: 600;
+  }
+  
+  .text-white {
+    color: #fff;
+  }
+  
+  .bg-red-500 {
+    background-color: #f56565;
+  }
+  
+  .border-white {
+    border-color: #fff;
+  }
+  
+  .rounded-full {
+    border-radius: 9999px;
+  }
+  
