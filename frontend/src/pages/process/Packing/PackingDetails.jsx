@@ -178,6 +178,20 @@ const PackingDetails = () => {
     }));
   };
 
+  const handleDefaultStitchTypeChange = (stitchType) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      suits_category: prevState.suits_category?.map((item) => ({
+        ...item,
+        stitch_type: stitchType,
+      })),
+      dupatta_category: prevState.dupatta_category?.map((item) => ({
+        ...item,
+        stitch_type: stitchType,
+      })),
+    }));
+  };
+
   const handlePenaltyChange = (key, field, value) => {
     setPenaltyValues((prev) => ({
       ...prev,
@@ -209,10 +223,11 @@ const PackingDetails = () => {
     e.preventDefault();
     const payload = {
       ...formData,
-      b_pair_parties: penaltyRows.map(({ party, quantity, additional_cost }) => ({
+      b_pair_parties: penaltyRows.map(({ party, quantity, labour_quantity, additional_cost }) => ({
         process_step: party.process_step,
         process_id: party.process_id,
         quantity,
+        labour_quantity,
         additional_cost,
       })),
     };
@@ -284,6 +299,7 @@ const PackingDetails = () => {
         <PackingStockSection
           defaultPrices={defaultPrices}
           onDefaultPriceChange={handleDefaultPriceChange}
+          onDefaultStitchTypeChange={handleDefaultStitchTypeChange}
           sections={stockSections}
           onRowChange={handleInputChange}
         />

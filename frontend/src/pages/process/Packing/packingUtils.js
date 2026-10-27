@@ -1,4 +1,4 @@
-import { getAvailableColors, STITCH_TYPES } from "../../../Utils/Common";
+import { formatAmount, getAvailableColors, STITCH_TYPES } from "../../../Utils/Common";
 
 export const canSendForward = (embroidery, availability) =>
   !embroidery?.next_steps?.packing ||
@@ -54,35 +54,60 @@ export const isPackingRowInvalid = (item) => {
 export const getPartyKey = (party) =>
   `${party.process_step}:${party.process_id}`;
 
-//PENALTY = B PAIR QTY x PARTY RATE + ADDITIONAL COST (SAME AS THE SERVER)
-export const getPartyPenalty = (party, values = {}) => {
+//CALENDER IS BILLED PER METER, SO A PER SUIT LABOUR DEDUCTION DOES NOT APPLY
+export const canDeductLabour = (party) => !party.unit;
+
+//PENALTY = (B PAIR QTY + LABOUR QTY) x PARTY RATE + ADDITIONAL COST (SAME AS THE SERVER)
+//LABOUR QTY = ALREADY DAMAGED SUITS THE PARTY WORKED ON, SO IT IS NOT PAID FOR THEM
+export const getPartyPenalty = (party, values = {}, totalBPairQuantity = 0) => {
   const quantityText = values.quantity ?? "";
+  const labourText = values.labour_quantity ?? "";
   const additionalText = values.additional_cost ?? "";
   const quantity = quantityText === "" ? 0 : Number(quantityText);
+  const labourInput = labourText === "" ? 0 : Number(labourText);
   const additional_cost = additionalText === "" ? 0 : Number(additionalText);
   const validQuantity = Number.isInteger(quantity) && quantity >= 0;
+  const damaged = validQuantity ? quantity : 0;
+  const validLabour =
+    !canDeductLabour(party) ||
+    (Number.isInteger(labourInput) &&
+      labourInput >= 0 &&
+      labourInput <= totalBPairQuantity - damaged);
+  const labour_quantity = canDeductLabour(party) && validLabour ? labourInput : 0;
   const validAdditional = Number.isFinite(additional_cost) && additional_cost >= 0;
-  const assigned = validQuantity && quantity > 0;
-  const penalty_amount = assigned ? Math.round(quantity * (party.rate || 0)) : 0;
-  const additional = assigned && validAdditional ? additional_cost : 0;
+  const assigned = damaged + labour_quantity > 0;
+  const penalty_amount = Math.round((damaged + labour_quantity) * (party.rate || 0));
+  const additional = damaged > 0 && validAdditional ? additional_cost : 0;
 
   return {
-    quantity: assigned ? quantity : 0,
+    quantity: damaged,
+    labour_quantity,
     additional_cost: additional,
     penalty_amount,
     total_penalty: penalty_amount + additional,
     invalidQuantity: !validQuantity,
-    invalidAdditional: assigned && !validAdditional,
-    valid: validQuantity && (!assigned || (validAdditional && party.bill_generated)),
+    invalidLabour: !validLabour,
+    invalidAdditional: damaged > 0 && !validAdditional,
+    valid:
+      validQuantity &&
+      validLabour &&
+      (!assigned || (party.bill_generated && (damaged === 0 || validAdditional))),
   };
+};
+
+//E.G. "3 × 500 = 1,500", "3 labour × 100 = 300" OR "(2 + 3 labour) × 100 = 500"
+export const getPenaltyBreakdown = ({ quantity, labour_quantity = 0, rate, penalty_amount }) => {
+  const labour = labour_quantity > 0 ? `${labour_quantity} labour` : "";
+  const units = quantity > 0 && labour ? `(${quantity} + ${labour})` : labour || quantity;
+  return `${units} × ${rate} = ${formatAmount(penalty_amount)}`;
 };
 
 export const getPenaltyStatus = (parties, penaltyValues, totalBPairQuantity) => {
   const rows = parties.map((party) => ({
     party,
-    ...getPartyPenalty(party, penaltyValues[getPartyKey(party)]),
+    ...getPartyPenalty(party, penaltyValues[getPartyKey(party)], totalBPairQuantity),
   }));
-  const assignedRows = rows.filter((row) => row.quantity > 0);
+  const assignedRows = rows.filter((row) => row.quantity > 0 || row.labour_quantity > 0);
   const assignedQuantity = assignedRows.reduce((total, row) => total + row.quantity, 0);
   const totalPenalty = assignedRows.reduce((total, row) => total + row.total_penalty, 0);
 

@@ -552,11 +552,14 @@ export const addInStockFromPackaging = async (req,res,next) => {
               session,
             })
           : [];
-      const parties = penaltyParties.map(({ process_step, process_id, partyName }) => ({
-        process_step,
-        process_id,
-        partyName,
-      }));
+      //ONLY THE PARTIES THAT DAMAGED THE SUITS, NOT THE LABOUR ONLY DEDUCTIONS
+      const parties = penaltyParties
+        .filter((party) => party.quantity > 0)
+        .map(({ process_step, process_id, partyName }) => ({
+          process_step,
+          process_id,
+          partyName,
+        }));
       const common = {
         useBags,
         d_no,

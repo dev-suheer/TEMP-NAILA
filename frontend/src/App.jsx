@@ -10,7 +10,6 @@ import Login from "./auth/Login";
 import ForgetPassword from "./auth/ForgetPassword";
 import ResetPassword from "./auth/ResetPassword";
 import OtpChecker from "./auth/OtpChecker";
-
 import Dashboard from "./pages/dashboard/Dashboard";
 import DashboardStats from "./pages/dashboard/DashboardStats";
 import SuitsStock from "./pages/inStock/suits/SuitsStock";

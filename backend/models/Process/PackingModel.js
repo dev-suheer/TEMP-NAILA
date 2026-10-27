@@ -84,6 +84,10 @@ const penaltySchema = new mongoose.Schema(
       type: Number,
       required: [true, "Quantity is required"],
     },
+    labour_quantity: {
+      type: Number,
+      default: 0,
+    },
     rate: {
       type: Number,
       default: 0,

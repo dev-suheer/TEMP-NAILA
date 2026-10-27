@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import Chip from "../../../../Component/Common/Chip";
 import { formatAmount, formatReadableDate } from "../../../../Utils/Common";
+import { getPenaltyBreakdown } from "../packingUtils";
 
 const PackingViewModal = ({ packing, onClose }) => {
   return (
@@ -124,7 +125,7 @@ const PackingViewModal = ({ packing, onClose }) => {
                         </span>
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-300">
-                        {penalty.quantity} × {penalty.rate} = {formatAmount(penalty.penalty_amount)}
+                        {getPenaltyBreakdown(penalty)}
                         {penalty.additional_cost > 0 &&
                           ` + ${formatAmount(penalty.additional_cost)} additional`}
                       </p>
