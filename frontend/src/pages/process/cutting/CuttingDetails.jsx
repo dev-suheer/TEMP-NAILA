@@ -32,6 +32,7 @@ import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ThemedSelect from "../../../Component/Common/select/ThemedSelect";
 import SkipToPackingModal from "../Packing/components/SkipToPackingModal";
+import { StepPackingIcon } from "../Packing/components/PackingStatusIcon";
 import { canSendForward } from "../Packing/packingUtils";
 import ButtonSpinner from "../../../Component/Common/button/ButtonSpinner";
 
@@ -567,7 +568,10 @@ const CuttingDetails = () => {
             </div>
             <div className="box">
               <span className="font-medium">Project Status:</span>
-              <span> <StatusChip status={SingleCutting?.project_status} fallback="" /></span>
+              <span className="inline-flex items-center gap-2">
+                <StatusChip status={SingleCutting?.project_status} fallback="" />
+                <StepPackingIcon step="Cutting" record={SingleCutting} />
+              </span>
             </div>
             <div className="box">
               <span className="font-medium">Date:</span>

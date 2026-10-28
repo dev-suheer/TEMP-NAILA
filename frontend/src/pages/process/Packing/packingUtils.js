@@ -1,4 +1,44 @@
-import { formatAmount, getAvailableColors, STITCH_TYPES } from "../../../Utils/Common";
+import {
+  formatAmount,
+  getAvailableColors,
+  PACKING_STATUS,
+  STITCH_TYPES,
+  toColorKey,
+} from "../../../Utils/Common";
+
+//HEADING OF THE PACKING MODAL, E.G. "Stitching · Ali · S.N 12 / D# 611" OR "Order · S.N 12 / D# 611"
+export const getPackingModalTitle = (label, record) =>
+  [label, record?.partyName, `S.N ${record?.serial_No} / D# ${record?.design_no}`]
+    .filter(Boolean)
+    .join(" · ");
+
+//WHICH PACKING ICON A RECORD SHOWS ({ tone, clickable }), OR null FOR NO ICON
+//RECORDS PACKED BEFORE PACKING ROUNDS WERE TRACKED HAVE NO ROUNDS TO SHOW, SO THEIR ICON IS NOT CLICKABLE
+//STITCHING: PACKING IS ITS ONLY NEXT STEP, SO FULLY / PARTIALLY PACKED IS EXACT
+export const getStitchingPackingIcon = (stitching) => {
+  if (stitching?.packing_status === PACKING_STATUS.PACKED) {
+    return { tone: "packed", clickable: !stitching.packed_before_tracking };
+  }
+  if (stitching?.packing_status === PACKING_STATUS.PARTIALLY_PACKED) {
+    return { tone: "partial", clickable: true };
+  }
+  return null;
+};
+
+//CUTTING / STONE: THE REST MAY HAVE GONE ON TO THE NEXT STEP, SO THE ICON ONLY SAYS SOME WERE PACKED FROM HERE
+export const getStepPackingIcon = (record) =>
+  record?.packed_quantity > 0 ? { tone: "info", clickable: true } : null;
+
+//ORDER: WHOLE-ORDER PROGRESS WORKED OUT BY THE SERVER (packing_status, packing_legacy)
+export const getOrderPackingIcon = (order) => {
+  if (order?.packing_status === PACKING_STATUS.PACKED) {
+    return { tone: "packed", clickable: !order.packing_legacy };
+  }
+  if (order?.packing_status === PACKING_STATUS.PARTIALLY_PACKED) {
+    return { tone: "partial", clickable: true };
+  }
+  return null;
+};
 
 export const canSendForward = (embroidery, availability) =>
   !embroidery?.next_steps?.packing ||
@@ -33,6 +73,54 @@ export const toPackingRow = (item, received) => ({
   b_pair_quantity: "",
   b_pair_sale_price: "",
 });
+
+//E.G. "Stitching · Ali · #2"
+export const getPackingSourceLabel = (packing) =>
+  [
+    packing.source_step,
+    packing.source_partyName || packing.stitching_partyName,
+    packing.round_no && `#${packing.round_no}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+const SOURCE_DETAIL_PAGES = {
+  Embroidery: "embroidery-details",
+  Cutting: "cutting-details",
+  Stone: "stones-details",
+  Stitching: "stitching-details",
+};
+
+//DETAIL PAGE OF THE STEP A PACKING WAS PACKED FROM
+export const getPackingSourcePath = (packing) => {
+  const page = SOURCE_DETAIL_PAGES[packing.source_step];
+  return page && packing.source_id ? `/dashboard/${page}/${packing.source_id}` : null;
+};
+
+//THE ROUND A NEW PACKING FROM THIS RECORD WILL BE, AND HOW MUCH IS LEFT TO PACK
+export const getNextRound = (availability) => ({
+  no: Math.max(0, ...(availability?.packings || []).map((packing) => packing.round_no || 0)) + 1,
+  available: Number(availability?.available || 0),
+  capacity: Number(availability?.capacity || 0),
+});
+
+//STITCHING ROWS FOR ONE PACKING ROUND: THE QUANTITY CHOSEN FOR EACH COLOR (OR ALL THAT IS LEFT),
+//SPREAD OVER THE ROWS OF THAT COLOR. ROWS WITH NOTHING TO PACK ARE LEFT OUT
+export const getStitchingRoundRows = (rows = [], packRows) => {
+  const chosen =
+    packRows &&
+    new Map(packRows.map((row) => [toColorKey(row.color), Number(row.quantity) || 0]));
+  return rows
+    .map((item) => {
+      const left = Math.max((Number(item.recieved) || 0) - (Number(item.packed_quantity) || 0), 0);
+      if (!chosen) return toPackingRow(item, left);
+      const key = toColorKey(item.color);
+      const quantity = Math.min(chosen.get(key) || 0, left);
+      chosen.set(key, (chosen.get(key) || 0) - quantity);
+      return toPackingRow(item, quantity);
+    })
+    .filter((row) => row.return_quantity > 0);
+};
 
 export const getRowQuantities = (item) => {
   const received = Number(item?.return_quantity) || 0;

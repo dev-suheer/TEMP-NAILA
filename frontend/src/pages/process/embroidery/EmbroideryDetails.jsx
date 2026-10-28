@@ -24,6 +24,7 @@ import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ThemedSelect from "../../../Component/Common/select/ThemedSelect";
 import SkipToPackingModal from "../Packing/components/SkipToPackingModal";
+import { OrderPackingIcon } from "../Packing/components/PackingStatusIcon";
 import { canSendForward } from "../Packing/packingUtils";
 import ButtonSpinner from "../../../Component/Common/button/ButtonSpinner";
 
@@ -483,7 +484,10 @@ const EmbroideryDetails = () => {
             </div>
             <div className="box">
               <span className="font-medium">Project Status:</span>
-              <span> <StatusChip status={project_status} fallback="" /></span>
+              <span className="inline-flex items-center gap-2">
+                <StatusChip status={project_status} fallback="" />
+                <OrderPackingIcon order={SingleEmbroidery} />
+              </span>
             </div>
             {/* SECOND ROW */}
             <div className="box">

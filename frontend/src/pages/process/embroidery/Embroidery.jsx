@@ -16,7 +16,6 @@ import { useSearchParams } from "react-router-dom";
 import AppSelect from "../../../Component/Common/select/AppSelect";
 import ReactSearchBox from "react-search-box";
 import DeleteModal from "../../../Component/Modal/DeleteModal";
-import { LuPackageCheck } from "react-icons/lu";
 import ProcessFilters from "../../../Component/ProcessFilters/ProcessFilters";
 import { IoAdd } from "react-icons/io5";
 import Loading from "../../../Component/Loader/Loading";
@@ -26,6 +25,7 @@ import { formatReadableDate, getPageLimit, getTodayDate } from "../../../Utils/C
 import Pagination from "../../../Component/Common/Pagination";
 import ColorList from "../../../Component/Common/ColorList";
 import StatusChip from "../../../Component/Common/StatusChip";
+import { OrderPackingIcon } from "../Packing/components/PackingStatusIcon";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ThemedSelect from "../../../Component/Common/select/ThemedSelect";
 
@@ -424,11 +424,7 @@ const Embroidery = () => {
                               scope="row"
                             >
                               <div className="flex items-center justify-start gap-2">
-                                <span className="text-green-500">
-                                  {data?.next_steps?.packing && (
-                                    <LuPackageCheck size={20} />
-                                  )}
-                                </span>
+                                <OrderPackingIcon order={data} />
                                 <div>
                                   <span className="text-red-500">
                                     {" "}

@@ -215,6 +215,15 @@ const embroiderySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    //WHOLE ORDER, ALL PACKING ROUNDS FROM ANY STEP, KEPT BY syncPackingCounters
+    packed_quantity: {
+      type: Number,
+      default: 0,
+    },
+    packing_count: {
+      type: Number,
+      default: 0,
+    },
     embAdditionalExpenditure : {
       type: Number,
       default: 0,

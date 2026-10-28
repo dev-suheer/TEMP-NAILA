@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   generateStitchingBillAsync,
@@ -16,6 +16,8 @@ import toast from "react-hot-toast";
 import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ButtonSpinner from "../../../Component/Common/button/ButtonSpinner";
+import SkipToPackingModal from "../Packing/components/SkipToPackingModal";
+import { StitchingPackingIcon } from "../Packing/components/PackingStatusIcon";
 
 const StitchingDetails = () => {
   const { id } = useParams();
@@ -34,6 +36,7 @@ const StitchingDetails = () => {
   const [isGenerateGatePassOpen, setisGenerateGatePassOpen] = useState(false);
   const [processBillModal, setProcessBillModal] = useState(false);
   const [processBillData, setProcessBillData] = useState({});
+  const [isPackingModalOpen, setPackingModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     id: id,
@@ -225,7 +228,10 @@ const StitchingDetails = () => {
             </div>
             <div className="box">
               <span className="font-medium ">Project Status:</span>
-              <span> <StatusChip status={SingleStitching?.project_status} fallback="" /></span>
+              <span className="inline-flex items-center gap-2">
+                <StatusChip status={SingleStitching?.project_status} fallback="" />
+                <StitchingPackingIcon stitching={SingleStitching} />
+              </span>
             </div>
             <div className="box">
               <span className="font-medium">Date:</span>
@@ -348,16 +354,25 @@ const StitchingDetails = () => {
               Generate Gate Pass
             </button>
           )}
+          {/* PACKING IS DONE IN ROUNDS UNTIL NOTHING RECEIVED IS LEFT */}
           {SingleStitching?.project_status === "Completed" &&
-            !SingleStitching?.packed &&
-              <Link
+            Number(SingleStitching?.processAvailability?.available || 0) > 0 && (
+              <button
+                onClick={() => setPackingModalOpen(true)}
                 className="px-4 py-2.5 text-sm rounded bg-[#252525] dark:bg-gray-200 text-white dark:text-gray-800"
-                to={`/dashboard/packing-details/${SingleStitching?.id}`}
               >
-               Move To Packing
-              </Link>
-            }
+                Move To Packing
+              </button>
+            )}
         </div>
+
+        {isPackingModalOpen && (
+          <SkipToPackingModal
+            sourceStep="Stitching"
+            sourceRecord={SingleStitching}
+            onClose={() => setPackingModalOpen(false)}
+          />
+        )}
 
         {isUpdateReceivedConfirmOpen && (
           <ConfirmationModal

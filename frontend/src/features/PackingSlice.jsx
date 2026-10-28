@@ -5,6 +5,34 @@ import { buildQueryParams } from "../Utils/Common";
 
 const getAllPackingsUrl = "/api/process/packing/getAllPackings";
 const deletePackingUrl = "/api/process/packing/deletePacking";
+const getPackingProgressUrl = "/api/process/packing/getPackingProgress";
+const getOrderPackingProgressUrl = "/api/process/packing/getOrderPackingProgress";
+
+export const getPackingProgressAsync = createAsyncThunk(
+  "packing/getProgress",
+  async (data) => {
+    try {
+      const response = await axios.post(getPackingProgressUrl, data);
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.error);
+      throw new Error(error.response?.data?.error);
+    }
+  }
+);
+
+export const getOrderPackingProgressAsync = createAsyncThunk(
+  "packing/getOrderProgress",
+  async (data) => {
+    try {
+      const response = await axios.post(getOrderPackingProgressUrl, data);
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.error);
+      throw new Error(error.response?.data?.error);
+    }
+  }
+);
 
 export const getAllPackingsAsync = createAsyncThunk(
   "packing/getAll",

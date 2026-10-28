@@ -81,6 +81,13 @@ export const PAYMENT_METHODS = Object.freeze({
   CASH: "Cash",
 });
 
+//SAME VALUES AS THE SERVER (backend/enums/PackingStatus.js)
+export const PACKING_STATUS = Object.freeze({
+  NOT_PACKED: "Not Packed",
+  PARTIALLY_PACKED: "Partially Packed",
+  PACKED: "Packed",
+});
+
 export const STITCH_TYPE_FILTER_OPTIONS = [
   { value: "", label: "All" },
   ...Object.values(STITCH_TYPES).map((stitchType) => ({
@@ -126,7 +133,7 @@ export const getDateOnlyTime = (value) => {
 
 export const formatAmount = (value) => `${Number(value || 0).toLocaleString()} Rs`;
 
-const toColorKey = (color) => String(color || "").trim().toLowerCase();
+export const toColorKey = (color) => String(color || "").trim().toLowerCase();
 
 export const getAvailableColors = (availability) =>
   (availability?.byColor || []).filter((item) => item.available > 0);

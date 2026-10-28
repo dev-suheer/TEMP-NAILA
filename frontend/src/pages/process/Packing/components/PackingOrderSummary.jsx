@@ -2,7 +2,7 @@
 import { FaEye } from "react-icons/fa";
 import PackingSection from "./PackingSection";
 
-const SummaryField = ({ label, children }) => (
+export const SummaryField = ({ label, children }) => (
   <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-600 dark:bg-gray-700">
     <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-300">
       {label}

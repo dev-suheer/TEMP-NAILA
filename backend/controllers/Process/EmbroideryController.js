@@ -12,8 +12,19 @@ import { buildDateRangeQuery, getPaginationParams } from "../../utils/Common.js"
 import {
   buildProcessAvailability,
   getActiveNextSteps,
+  getOrdersPackingProgress,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
+
+//THE PACKING ICON IS EXTRA INFORMATION: IF IT CAN NOT BE WORKED OUT, THE ORDERS STILL LOAD WITHOUT IT
+const getPackingProgressSafely = async (orders) => {
+  try {
+    return await getOrdersPackingProgress(orders);
+  } catch (error) {
+    console.error("Order packing progress could not be worked out:", error.message);
+    return orders.map(() => ({}));
+  }
+};
 
 
 export const addEmbriodery = async (req, res, next) => {
@@ -296,14 +307,20 @@ export const getAllEmbroidery = async (req, res, next) => {
       .limit(limit)
       .sort({ createdAt: -1 });
     const total = await EmbroideryModel.countDocuments(query);
+    //WORKED OUT FOR THIS PAGE ONLY, IN A FIXED NUMBER OF QUERIES
+    const packingProgress = await getPackingProgressSafely(data);
+    setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
-      data,
+      data: data.map((order, index) => ({
+        ...order.toJSON(),
+        packing_status: packingProgress[index].packing_status,
+        packing_legacy: packingProgress[index].legacy,
+      })),
       page,
       limit,
       totalRecords: total,
     };
-    setMongoose();
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -320,11 +337,14 @@ export const getEmbroideryById = async (req, res, next) => {
       sourceStep: ProcessStep.EMBROIDERY,
       sourceId: id,
     });
+    const [packingProgress] = await getPackingProgressSafely([data]);
 
     setMongoose();
     return res.status(200).json({
       ...data.toObject({ virtuals: true }),
       processAvailability,
+      packing_status: packingProgress.packing_status,
+      packing_legacy: packingProgress.legacy,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

@@ -13,6 +13,7 @@ import Pagination from "../../../Component/Common/Pagination";
 import { formatReadableDate, getPageLimit } from "../../../Utils/Common";
 import ColorList from "../../../Component/Common/ColorList";
 import StatusChip from "../../../Component/Common/StatusChip";
+import { StepPackingIcon } from "../Packing/components/PackingStatusIcon";
 import PageLoader from "../../../Component/Loader/PageLoader";
 const Cutting = () => {
   const dispatch = useDispatch();
@@ -125,14 +126,19 @@ const Cutting = () => {
                           className="px-2 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
                           scope="row"
                         >
-                          <span className="text-red-500">
-                            {" "}
-                            {data.serial_No}
-                          </span>
-                          /
-                          <span className="text-green-600">
-                            {data.Manual_No ?? "--"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <StepPackingIcon step="Cutting" record={data} />
+                            <div>
+                              <span className="text-red-500">
+                                {" "}
+                                {data.serial_No}
+                              </span>
+                              /
+                              <span className="text-green-600">
+                                {data.Manual_No ?? "--"}
+                              </span>
+                            </div>
+                          </div>
                         </th>
                         <td className="px-2 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-xs md:text-sm">{data.partyName}</td>
                         <td className="px-2 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-xs md:text-sm">{data.design_no}</td>

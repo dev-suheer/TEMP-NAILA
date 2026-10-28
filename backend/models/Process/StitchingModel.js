@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { PackingStatus } from "../../enums/PackingStatus.js";
 
 const suit_schema = new mongoose.Schema(
   {
@@ -12,6 +13,11 @@ const suit_schema = new mongoose.Schema(
       type: Number,
     },
     recieved: {
+      type: Number,
+      default: 0,
+    },
+    //SUM OF ALL PACKING ROUNDS FOR THIS COLOR, KEPT BY syncPackingCounters
+    packed_quantity: {
       type: Number,
       default: 0,
     },
@@ -39,6 +45,10 @@ const dupatta_schema = new mongoose.Schema(
       type: Number,
     },
     recieved: {
+      type: Number,
+      default: 0,
+    },
+    packed_quantity: {
       type: Number,
       default: 0,
     },
@@ -121,9 +131,20 @@ const stitchingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    packed:{
+    //PACKING IS DONE IN ROUNDS, THESE ARE KEPT BY syncPackingCounters
+    packed_quantity: {
+      type: Number,
+      default: 0,
+    },
+    packing_status: {
+      type: String,
+      enum: Object.values(PackingStatus),
+      default: PackingStatus.NOT_PACKED,
+    },
+    //PACKED IN ONE GO BEFORE ROUNDS WERE TRACKED, SO IT HAS NO PACKING RECORD
+    packed_before_tracking: {
       type: Boolean,
-      default: false
+      default: false,
     },
      additionalExpenditure: {
       type: Number,
@@ -134,6 +155,7 @@ const stitchingSchema = new mongoose.Schema(
 );
 
 stitchingSchema.index({ project_status: 1, createdAt: -1 });
+stitchingSchema.index({ packing_status: 1, createdAt: -1 });
 stitchingSchema.index({ partyName: 1, createdAt: -1 });
 stitchingSchema.index({ date: -1 });
 stitchingSchema.index({ embroidery_Id: 1 });

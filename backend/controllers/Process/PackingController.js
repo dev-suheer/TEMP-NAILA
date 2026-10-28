@@ -8,6 +8,45 @@ import { StitchingModel } from "../../models/Process/StitchingModel.js";
 import { setMongoose } from "../../utils/Mongoose.js";
 import { getPaginationParams } from "../../utils/Common.js";
 import { reversePackingPenalties } from "./B_PairController.js";
+import {
+  buildProcessAvailability,
+  getOrdersPackingProgress,
+  ProcessStep,
+  syncPackingCounters,
+} from "../../utils/ProcessQuantity.js";
+
+const PROGRESS_STEPS = [ProcessStep.CUTTING, ProcessStep.STONE, ProcessStep.STITCHING];
+
+//ONE STEP'S PACKING: WHAT IT RECEIVED, WHERE IT WENT AND ITS ROUNDS (OPENED FROM ITS PACKING ICON)
+export const getPackingProgress = async (req, res) => {
+  try {
+    const { source_step, source_id } = req.body;
+    if (!PROGRESS_STEPS.includes(source_step)) throw new Error("Invalid packing source");
+    if (!mongoose.Types.ObjectId.isValid(source_id)) throw new Error("Invalid record");
+
+    const data = await buildProcessAvailability({ sourceStep: source_step, sourceId: source_id });
+    setMongoose();
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+//A WHOLE ORDER'S PACKING: EACH STEP'S NUMBERS AND EVERY ROUND (OPENED FROM THE ORDER'S PACKING ICON)
+export const getOrderPackingProgress = async (req, res) => {
+  try {
+    const { embroidery_Id } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(embroidery_Id)) throw new Error("Invalid order");
+    const order = await EmbroideryModel.findById(embroidery_Id);
+    if (!order) throw new Error("Order not found");
+
+    const [progress] = await getOrdersPackingProgress([order], { withRecords: true });
+    setMongoose();
+    return res.status(200).json(progress);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
 
 export const getAllPackings = async (req, res, next) => {
   try {
@@ -97,23 +136,16 @@ export const deletePacking = async (req, res, next) => {
 
       await reversePackingPenalties(packing.penalties, session);
 
-      if (packing.packing_Id) {
-        await StitchingModel.updateOne(
-          { _id: packing.packing_Id },
-          { $set: { packed: false } }
-        ).session(session);
-      }
-
       //ORDER STAYS PACKED WHILE ANOTHER OF ITS PACKINGS EXISTS
       const otherPacking = await PackingModel.exists({
         embroidery_Id: packing.embroidery_Id,
         _id: { $ne: packing._id },
       }).session(session);
-      const otherPackedStitching = await StitchingModel.exists({
+      const legacyPackedStitching = await StitchingModel.exists({
         embroidery_Id: packing.embroidery_Id,
-        packed: true,
+        packed_before_tracking: true,
       }).session(session);
-      if (!otherPacking && !otherPackedStitching) {
+      if (!otherPacking && !legacyPackedStitching) {
         await EmbroideryModel.updateOne(
           { _id: packing.embroidery_Id },
           { $set: { "next_steps.packing": false } }
@@ -121,6 +153,13 @@ export const deletePacking = async (req, res, next) => {
       }
 
       await PackingModel.deleteOne({ _id: packing._id }).session(session);
+      //ITS SUITS BECOME AVAILABLE TO PACK AGAIN
+      await syncPackingCounters({
+        sourceStep: packing.source_step,
+        sourceId: packing.source_id,
+        embroidery_Id: packing.embroidery_Id,
+        session,
+      });
     });
 
     return res

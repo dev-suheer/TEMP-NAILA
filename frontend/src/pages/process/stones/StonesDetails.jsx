@@ -33,6 +33,7 @@ import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ThemedSelect from "../../../Component/Common/select/ThemedSelect";
 import SkipToPackingModal from "../Packing/components/SkipToPackingModal";
+import { StepPackingIcon } from "../Packing/components/PackingStatusIcon";
 import { canSendForward } from "../Packing/packingUtils";
 import ButtonSpinner from "../../../Component/Common/button/ButtonSpinner";
 
@@ -707,7 +708,10 @@ const StonesDetails = () => {
             </div>
             <div className="box">
               <span className="font-medium">Project Status:</span>
-              <span> <StatusChip status={SingleStone?.project_status} fallback="" /></span>
+              <span className="inline-flex items-center gap-2">
+                <StatusChip status={SingleStone?.project_status} fallback="" />
+                <StepPackingIcon step="Stone" record={SingleStone} />
+              </span>
             </div>
 
             {SingleStone?.category_quantity?.map((item, index) => (

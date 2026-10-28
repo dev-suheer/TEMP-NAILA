@@ -17,6 +17,8 @@ import {
   getPageLimit,
 } from "../../../Utils/Common";
 import PackingViewModal from "./components/PackingViewModal";
+import PackingSourceLink from "./components/PackingSourceLink";
+import { getPackingSourceLabel } from "./packingUtils";
 
 const cellClass = "px-2 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-xs md:text-sm";
 const headClass = "px-2 py-2 md:px-4 md:py-3 lg:px-6 lg:py-3 text-xs md:text-sm";
@@ -81,13 +83,13 @@ const Packings = () => {
   const packings = Packings?.data || [];
 
   const deleteMessage = (packing) =>
-    `This permanently removes the whole packing: ${packing.total_main} main stock and ${
-      packing.total_b_pair
-    } B-Pair suits${
+    `This permanently removes packing ${getPackingSourceLabel(packing)}: ${
+      packing.total_main
+    } main stock and ${packing.total_b_pair} B-Pair suits${
       packing.total_penalty > 0
         ? `, and reverses ${formatAmount(packing.total_penalty)} penalties from the party accounts`
         : ""
-    }. The order will be available for packing again.`;
+    }. These ${packing.total_received} suits become available to pack again.`;
 
   return (
     <>
@@ -159,6 +161,7 @@ const Packings = () => {
                   <th className={headClass}>Date</th>
                   <th className={headClass}>S.N / M.N</th>
                   <th className={headClass}>Design No</th>
+                  <th className={headClass}>Packed From</th>
                   <th className={headClass}>Main</th>
                   <th className={headClass}>B-Pair</th>
                   <th className={headClass}>Penalty</th>
@@ -179,7 +182,9 @@ const Packings = () => {
                         {packing.serial_No} / {packing.Manual_No}
                       </td>
                       <td className={cellClass}>{packing.design_no}</td>
-                     
+                      <td className={`${cellClass} whitespace-nowrap`}>
+                        <PackingSourceLink packing={packing} />
+                      </td>
                       <td className={cellClass}>{packing.total_main}</td>
                       <td className={cellClass}>{packing.total_b_pair}</td>
                       <td className={`${cellClass} whitespace-nowrap`}>

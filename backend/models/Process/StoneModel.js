@@ -121,6 +121,11 @@ const stoneSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    //SUITS PACKED DIRECTLY FROM THIS STONE, KEPT BY syncPackingCounters
+    packed_quantity: {
+      type: Number,
+      default: 0,
+    },
      additionalExpenditure: {
       type: Number,
       default: 0,

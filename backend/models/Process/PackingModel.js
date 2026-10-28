@@ -131,6 +131,16 @@ const packingSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    //PARTY OF THE STEP IT WAS PACKED FROM (ANY STEP)
+    source_partyName: {
+      type: String,
+      default: null,
+    },
+    //1, 2, 3... PER SOURCE RECORD, STORED SO A ROUND KEEPS ITS NUMBER WHEN AN EARLIER ONE IS DELETED
+    round_no: {
+      type: Number,
+      default: 1,
+    },
     serial_No: {
       type: Number,
     },
