@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { LuPackage, LuPackageCheck, LuPackageOpen } from "react-icons/lu";
+import { LuPackageCheck, LuPackageMinus } from "react-icons/lu";
 import PackingProgressModal from "./PackingProgressModal";
 import {
   getOrderPackingIcon,
@@ -13,8 +13,7 @@ import {
 //SHAPE AND COLOUR BOTH CHANGE, SO THE STATE IS CLEAR WITHOUT RELYING ON COLOUR ALONE
 const tones = {
   packed: { Icon: LuPackageCheck, className: "text-green-600 dark:text-green-400" },
-  partial: { Icon: LuPackageOpen, className: "text-amber-500 dark:text-amber-400" },
-  info: { Icon: LuPackage, className: "text-blue-600 dark:text-blue-300" },
+  partial: { Icon: LuPackageMinus, className: "text-amber-500 dark:text-amber-400" },
 };
 
 //THE PACKING ICON OF A LIST ROW OR DETAIL PAGE. icon IS { tone, clickable } FROM packingUtils (null = NO ICON)

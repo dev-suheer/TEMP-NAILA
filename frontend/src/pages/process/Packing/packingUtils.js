@@ -25,9 +25,14 @@ export const getStitchingPackingIcon = (stitching) => {
   return null;
 };
 
-//CUTTING / STONE: THE REST MAY HAVE GONE ON TO THE NEXT STEP, SO THE ICON ONLY SAYS SOME WERE PACKED FROM HERE
-export const getStepPackingIcon = (record) =>
-  record?.packed_quantity > 0 ? { tone: "info", clickable: true } : null;
+//CUTTING / STONE: SUITS CAN ALSO GO ON TO THE NEXT STEP, SO THEY ARE JUDGED BY WHAT IS LEFT HERE (NOT SENT ANYWHERE)
+//LISTS SEND packing_left, DETAIL PAGES ALREADY HAVE THE RECORD'S AVAILABILITY
+export const getStepPackingIcon = (record) => {
+  const left = record?.packing_left ?? record?.processAvailability?.available;
+  if (!(record?.packed_quantity > 0) || typeof left !== "number") return null;
+  const isDone = record.project_status === "Completed" && left <= 0;
+  return { tone: isDone ? "packed" : "partial", clickable: true };
+};
 
 //ORDER: WHOLE-ORDER PROGRESS WORKED OUT BY THE SERVER (packing_status, packing_legacy)
 export const getOrderPackingIcon = (order) => {
@@ -74,12 +79,15 @@ export const toPackingRow = (item, received) => ({
   b_pair_sale_price: "",
 });
 
-//E.G. "Stitching · Ali · #2"
+//E.G. "Round 2": THE HOW-MANYTH PACKING FROM ITS SOURCE RECORD
+export const getRoundLabel = (packing) => `Round ${packing.round_no}`;
+
+//E.G. "Stitching · Ali · Round 2"
 export const getPackingSourceLabel = (packing) =>
   [
     packing.source_step,
     packing.source_partyName || packing.stitching_partyName,
-    packing.round_no && `#${packing.round_no}`,
+    packing.round_no && getRoundLabel(packing),
   ]
     .filter(Boolean)
     .join(" · ");

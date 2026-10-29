@@ -8,6 +8,8 @@ import {
   assertSourceCanCreateNextStep,
   assertSourceHasNoNextSteps,
   buildProcessAvailability,
+  getRecordsPackingLeft,
+  loadPackingInfoSafely,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
 
@@ -132,16 +134,24 @@ export const getAllStone = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 });
-      
+
     const total = await StoneModel.countDocuments(query);
+    //WHAT IS LEFT AT EACH PACKED STONE, FOR ITS PACKING ICON. WORKED OUT FOR THIS PAGE ONLY
+    const packingLeft = await loadPackingInfoSafely(
+      () => getRecordsPackingLeft({ sourceStep: ProcessStep.STONE, records: data }),
+      data
+    );
+    setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
-      data,
+      data: data.map((stone, index) => ({
+        ...stone.toJSON(),
+        packing_left: packingLeft[index].left,
+      })),
       page,
       limit,
       totalRecords: total,
     };
-    setMongoose();
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });

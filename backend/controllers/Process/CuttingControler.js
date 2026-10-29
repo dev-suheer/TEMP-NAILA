@@ -7,6 +7,8 @@ import {
   assertSourceCanCreateNextStep,
   assertSourceHasNoNextSteps,
   buildProcessAvailability,
+  getRecordsPackingLeft,
+  loadPackingInfoSafely,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
 
@@ -187,14 +189,22 @@ export const getAllCutting = async (req, res, next) => {
       .limit(limit)
       .sort({ createdAt: -1 });
     const total = await CuttingModel.countDocuments(query);
+    //WHAT IS LEFT AT EACH PACKED CUTTING, FOR ITS PACKING ICON. WORKED OUT FOR THIS PAGE ONLY
+    const packingLeft = await loadPackingInfoSafely(
+      () => getRecordsPackingLeft({ sourceStep: ProcessStep.CUTTING, records: data }),
+      data
+    );
+    setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
-      data,
+      data: data.map((cutting, index) => ({
+        ...cutting.toJSON(),
+        packing_left: packingLeft[index].left,
+      })),
       page,
       limit,
       totalRecords: total,
     };
-    setMongoose();
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });

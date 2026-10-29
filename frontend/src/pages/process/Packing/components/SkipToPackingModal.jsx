@@ -98,7 +98,7 @@ const SkipToPackingModal = ({ embroidery, sourceStep, sourceRecord, onClose }) =
               Move To Packing
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
-              Round #{round.no} · {round.available} of {round.capacity} available
+              Round {round.no} · {round.available} of {round.capacity} available
             </p>
           </div>
           <button

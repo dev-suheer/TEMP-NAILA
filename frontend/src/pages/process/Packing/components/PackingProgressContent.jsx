@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { toColorKey } from "../../../../Utils/Common";
+import { getRoundLabel } from "../packingUtils";
 import { SummaryField } from "./PackingOrderSummary";
 import PackingRoundList from "./PackingRoundList";
 
@@ -53,7 +54,7 @@ const PackingProgressContent = ({ availability }) => {
                   <th className={headClass}>Color</th>
                   {packings.map((packing) => (
                     <th key={packing.id} className={headClass}>
-                      #{packing.round_no}
+                      {getRoundLabel(packing)}
                     </th>
                   ))}
                   <th className={headClass}>Left</th>
@@ -75,7 +76,7 @@ const PackingProgressContent = ({ availability }) => {
             </table>
           </div>
 
-          <PackingRoundList packings={packings} getLabel={(packing) => `#${packing.round_no}`} />
+          <PackingRoundList packings={packings} getLabel={getRoundLabel} />
         </>
       )}
     </div>

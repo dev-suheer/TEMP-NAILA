@@ -13,18 +13,9 @@ import {
   buildProcessAvailability,
   getActiveNextSteps,
   getOrdersPackingProgress,
+  loadPackingInfoSafely,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
-
-//THE PACKING ICON IS EXTRA INFORMATION: IF IT CAN NOT BE WORKED OUT, THE ORDERS STILL LOAD WITHOUT IT
-const getPackingProgressSafely = async (orders) => {
-  try {
-    return await getOrdersPackingProgress(orders);
-  } catch (error) {
-    console.error("Order packing progress could not be worked out:", error.message);
-    return orders.map(() => ({}));
-  }
-};
 
 
 export const addEmbriodery = async (req, res, next) => {
@@ -308,7 +299,7 @@ export const getAllEmbroidery = async (req, res, next) => {
       .sort({ createdAt: -1 });
     const total = await EmbroideryModel.countDocuments(query);
     //WORKED OUT FOR THIS PAGE ONLY, IN A FIXED NUMBER OF QUERIES
-    const packingProgress = await getPackingProgressSafely(data);
+    const packingProgress = await loadPackingInfoSafely(() => getOrdersPackingProgress(data), data);
     setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
@@ -337,7 +328,10 @@ export const getEmbroideryById = async (req, res, next) => {
       sourceStep: ProcessStep.EMBROIDERY,
       sourceId: id,
     });
-    const [packingProgress] = await getPackingProgressSafely([data]);
+    const [packingProgress] = await loadPackingInfoSafely(
+      () => getOrdersPackingProgress([data]),
+      [data]
+    );
 
     setMongoose();
     return res.status(200).json({

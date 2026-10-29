@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { getPackingSourceLabel } from "../packingUtils";
+import { getRoundLabel } from "../packingUtils";
 import PackingRoundList from "./PackingRoundList";
 
 const headClass = "px-3 py-2 whitespace-nowrap";
@@ -8,6 +8,17 @@ const cellClass = "px-3 py-2 whitespace-nowrap";
 //A WHOLE ORDER'S PACKING (progress FROM THE SERVER): WHAT EACH STEP RECEIVED, PACKED AND HAS LEFT, AND EVERY ROUND
 const OrderPackingProgressContent = ({ progress }) => {
   const { steps = [], packings = [] } = progress;
+  //EACH STEP'S ROUNDS TOGETHER, IN THE STEP TABLE'S ORDER, SO ITS ROUND NUMBERS READ 1, 2, 3
+  const roundsByStep = steps
+    .map((step) => ({
+      step,
+      rounds: packings
+        .filter(
+          (packing) => packing.source_step === step.step && String(packing.source_id) === step.id
+        )
+        .sort((a, b) => a.round_no - b.round_no),
+    }))
+    .filter(({ rounds }) => rounds.length > 0);
 
   return (
     <div className="space-y-4 text-sm text-gray-800 dark:text-gray-200">
@@ -53,8 +64,19 @@ const OrderPackingProgressContent = ({ progress }) => {
         </div>
       )}
 
-      {packings.length > 0 ? (
-        <PackingRoundList packings={packings} getLabel={getPackingSourceLabel} />
+      {roundsByStep.length > 0 ? (
+        roundsByStep.map(({ step, rounds }) => (
+          <div key={step.id}>
+            <h4 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+              {step.step}
+              <span className="font-normal text-gray-500 dark:text-gray-400">
+                {" · "}
+                {step.partyName}
+              </span>
+            </h4>
+            <PackingRoundList packings={rounds} getLabel={getRoundLabel} />
+          </div>
+        ))
       ) : (
         <p className="text-gray-500 dark:text-gray-400">No packing rounds yet.</p>
       )}

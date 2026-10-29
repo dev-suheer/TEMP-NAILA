@@ -289,7 +289,7 @@ const PackingDetails = () => {
           </h1>
           {round && (
             <Chip variant="primary" className="text-xs">
-              Round #{round.no} · {round.available} of {round.capacity} available
+              Round {round.no} · {round.available} of {round.capacity} available
             </Chip>
           )}
         </div>

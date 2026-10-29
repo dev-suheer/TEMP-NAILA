@@ -30,16 +30,17 @@ const toColorKey = (color) => String(color || "").trim().toLowerCase();
 
 const isLegacyEmbroiderySource = (sourceStep) => sourceStep === ProcessStep.EMBROIDERY;
 
-const sourceQuery = ({ sourceStep, sourceId, targetStep }) => {
-  const query = [{ source_step: sourceStep, source_id: sourceId }];
+//NEXT-STEP RECORDS TAKEN FROM ANY OF THESE SOURCE RECORDS (ONE OR A WHOLE LIST PAGE)
+const sourceQuery = ({ sourceStep, sourceIds, targetStep }) => {
+  const query = [{ source_step: sourceStep, source_id: { $in: sourceIds } }];
 
   if (sourceStep === ProcessStep.CUTTING && targetStep === ProcessStep.STONE) {
-    query.push({ cuttingId: String(sourceId) });
+    query.push({ cuttingId: { $in: sourceIds.map(String) } });
   }
 
   if (isLegacyEmbroiderySource(sourceStep)) {
     query.push({
-      embroidery_Id: sourceId,
+      embroidery_Id: { $in: sourceIds },
       $or: [{ source_id: null }, { source_id: { $exists: false } }],
     });
   }
@@ -59,6 +60,20 @@ const isFromSource = (doc, { sourceStep, sourceId, targetStep }) => {
     String(doc.embroidery_Id) === id &&
     doc.source_id == null
   );
+};
+
+//THE SAME LINKS AS isFromSource, AS THE IDS OF THE SOURCE RECORDS A LOADED RECORD WAS TAKEN FROM,
+//SO A WHOLE LIST PAGE CAN BE FILED IN ONE PASS. KEEP sourceQuery, isFromSource AND THIS IN SYNC
+const getSourceIds = (doc, { sourceStep, targetStep }) => {
+  const ids = new Set();
+  if (doc.source_step === sourceStep && doc.source_id != null) ids.add(String(doc.source_id));
+  if (sourceStep === ProcessStep.CUTTING && targetStep === ProcessStep.STONE && doc.cuttingId) {
+    ids.add(doc.cuttingId);
+  }
+  if (isLegacyEmbroiderySource(sourceStep) && doc.source_id == null && doc.embroidery_Id != null) {
+    ids.add(String(doc.embroidery_Id));
+  }
+  return ids;
 };
 
 const getSourceRecord = async ({ sourceStep, sourceId, session }) => {
@@ -213,7 +228,7 @@ export const getAllocatedFromSource = async ({ sourceStep, sourceId, session }) 
   const docsByTarget = await Promise.all(
     allocationTargets.map((target) =>
       target.model
-        .find(sourceQuery({ sourceStep, sourceId, targetStep: target.step }))
+        .find(sourceQuery({ sourceStep, sourceIds: [sourceId], targetStep: target.step }))
         .session(session)
     )
   );
@@ -583,6 +598,52 @@ export const getOrdersPackingProgress = async (orders, { session = null, withRec
       packings: [...orderPackings].sort((a, b) => a.createdAt - b.createdAt),
     };
   });
+};
+
+//WHAT IS STILL LEFT AT EACH LISTED CUTTING / STONE (NOT SENT TO A NEXT STEP OR PACKED), FOR ITS PACKING ICON
+//ONLY RECORDS THAT WERE PACKED FROM GET A NUMBER. ONE QUERY PER NEXT STEP FOR THE WHOLE PAGE, NOT PER RECORD
+export const getRecordsPackingLeft = async ({ sourceStep, records, session = null }) => {
+  const packedRecords = records.filter((record) => record.packed_quantity > 0);
+  if (!packedRecords.length) return records.map(() => ({}));
+
+  const sourceIds = packedRecords.map((record) => record._id);
+  const docsByTarget = await Promise.all(
+    allocationTargets.map((target) =>
+      target.model
+        .find(sourceQuery({ sourceStep, sourceIds, targetStep: target.step }))
+        .lean()
+        .session(session)
+    )
+  );
+  //EACH LOADED RECORD IS FILED UNDER THE SOURCE RECORD(S) IT CAME FROM, SO EACH ROW IS A LOOKUP, NOT A SCAN
+  const bySourceByTarget = docsByTarget.map((docs, index) => {
+    const bySource = new Map();
+    docs.forEach((doc) =>
+      getSourceIds(doc, { sourceStep, targetStep: allocationTargets[index].step }).forEach((id) => {
+        if (!bySource.has(id)) bySource.set(id, []);
+        bySource.get(id).push(doc);
+      })
+    );
+    return bySource;
+  });
+  const leftById = new Map(
+    packedRecords.map((record) => {
+      const id = String(record._id);
+      const allocated = getAllocation(bySourceByTarget.map((bySource) => bySource.get(id) || []));
+      return [id, toAvailability({ sourceStep, source: record, allocated }).available];
+    })
+  );
+  return records.map((record) => ({ left: leftById.get(String(record._id)) }));
+};
+
+//PACKING ICONS ON LISTS ARE EXTRA INFORMATION: IF THEY CAN NOT BE WORKED OUT, THE LIST STILL LOADS WITHOUT THEM
+export const loadPackingInfoSafely = async (load, records) => {
+  try {
+    return await load();
+  } catch (error) {
+    console.error("Packing information could not be worked out:", error.message);
+    return records.map(() => ({}));
+  }
 };
 
 const nextStepModels = {
