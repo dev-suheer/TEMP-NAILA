@@ -18,15 +18,25 @@ const bPairHeadClass =
 const PackingStockSection = ({
   defaultPrices,
   onDefaultPriceChange,
+  onDefaultStitchTypeChange,
   sections,
   onRowChange,
 }) => {
+  
+  const rowStitchTypes = new Set(
+    sections.flatMap((section) => section.rows.map((item) => item.stitch_type))
+  );
+  const defaultStitchType =
+    rowStitchTypes.size > 1
+      ? ""
+      : [...rowStitchTypes][0] || STITCH_TYPES.UNSTITCHED;
+
   return (
     <PackingSection
       step={2}
       title="Stock to add"
     >
-      <div className="mb-6 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {defaultPriceFields.map(({ field, label, placeholder }) => (
           <div key={field}>
             <label className="mb-1 block text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -41,6 +51,24 @@ const PackingStockSection = ({
             />
           </div>
         ))}
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+            Default Type
+          </label>
+          <ThemedSelect
+            value={defaultStitchType}
+            onChange={(e) => onDefaultStitchTypeChange(e.target.value)}
+          >
+            <option value="" disabled>
+              Mixed
+            </option>
+            {Object.values(STITCH_TYPES).map((stitchType) => (
+              <option key={stitchType} value={stitchType}>
+                {stitchType}
+              </option>
+            ))}
+          </ThemedSelect>
+        </div>
       </div>
 
       {sections.map((section) => (

@@ -84,6 +84,10 @@ const penaltySchema = new mongoose.Schema(
       type: Number,
       required: [true, "Quantity is required"],
     },
+    labour_quantity: {
+      type: Number,
+      default: 0,
+    },
     rate: {
       type: Number,
       default: 0,
@@ -126,6 +130,16 @@ const packingSchema = new mongoose.Schema(
     stitching_partyName: {
       type: String,
       default: null,
+    },
+    //PARTY OF THE STEP IT WAS PACKED FROM (ANY STEP)
+    source_partyName: {
+      type: String,
+      default: null,
+    },
+    //1, 2, 3... PER SOURCE RECORD, STORED SO A ROUND KEEPS ITS NUMBER WHEN AN EARLIER ONE IS DELETED
+    round_no: {
+      type: Number,
+      default: 1,
     },
     serial_No: {
       type: Number,

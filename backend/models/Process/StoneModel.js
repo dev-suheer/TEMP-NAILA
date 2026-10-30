@@ -15,44 +15,10 @@ const category_schema = new mongoose.Schema({
     required: [true, "Qunatity Vlaue Required"],
   },
   recieved_Data: {
-    first: {
-      quantity: {
-        type: Number,
-        default: 0,
-      },
-      date: {
-        type: String,
-        default: '',
-      },
-    },
-    second: {
-        quantity: {
-          type: Number,
-          default: 0,
-        },
-        date: {
-          type: String,
-          default: '',
-        },
-      },
-    third: {
-        quantity: {
-          type: Number,
-          default: 0,
-        },
-        date: {
-          type: String,
-          default: '',
-        },
-      },
     r_total: {
       type: Number,
       default: 0,
     },
-    r_date: {
-        type: String,
-        default: '',
-      },
   },
 },{ timestamps: true });
 
@@ -120,6 +86,11 @@ const stoneSchema = new mongoose.Schema(
     updated : {
       type: Boolean,
       default: false
+    },
+    //SUITS PACKED DIRECTLY FROM THIS STONE, KEPT BY syncPackingCounters
+    packed_quantity: {
+      type: Number,
+      default: 0,
     },
      additionalExpenditure: {
       type: Number,

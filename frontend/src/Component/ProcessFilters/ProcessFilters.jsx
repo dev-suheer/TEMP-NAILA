@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from "react";
 import { CiSearch } from "react-icons/ci";
 import { GrPowerReset } from "react-icons/gr";
@@ -6,13 +7,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getProcessFiltersDataAsync } from "../../features/EmbroiderySlice";
 import AppSelect from "../Common/select/AppSelect";
-import { buildPaginationQuery, getPageLimit } from "../../Utils/Common";
+import { buildPaginationQuery, getPageLimit, PACKING_STATUS } from "../../Utils/Common";
 
 const initialFilters = {
   Manual_No: "",
   partyName: "",
   project_status: "",
   Design_No: "",
+  packing_status: "",
 };
 
 const inputClass =
@@ -23,12 +25,18 @@ const statusOptions = [
   { value: "Pending", label: "Pending" },
 ];
 
+const packingStatusOptions = Object.values(PACKING_STATUS).map((status) => ({
+  value: status,
+  label: status,
+}));
+
 const getRouteCategory = (pathname) => {
   const routeCategory = pathname.split("/").filter(Boolean).pop();
   return routeCategory === "calendar" ? "calender" : routeCategory;
 };
 
-const ProcessFilters = ({ handlers }) => {
+//showPackingFilter: ONLY STITCHING HAS A PACKING STATUS
+const ProcessFilters = ({ handlers, showPackingFilter = false }) => {
   const { liftUpFiltersData } = handlers;
   const dispatch = useDispatch();
   const location = useLocation();
@@ -105,11 +113,15 @@ const ProcessFilters = ({ handlers }) => {
       <div
         className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-out ${
           isOpen
-            ? "w-[900px] translate-x-0 opacity-100"
+            ? `${showPackingFilter ? "w-[1078px]" : "w-[900px]"} translate-x-0 opacity-100`
             : "pointer-events-none w-0 translate-x-3 opacity-0"
         }`}
       >
-        <div className="flex w-[900px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-600 dark:bg-gray-800">
+        <div
+          className={`flex ${
+            showPackingFilter ? "w-[1078px]" : "w-[900px]"
+          } items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-600 dark:bg-gray-800`}
+        >
           <AppSelect
             options={statusOptions}
             placeholder="Status"
@@ -118,6 +130,17 @@ const ProcessFilters = ({ handlers }) => {
               handleSelectFilter("project_status", selectedOption)
             }
           />
+
+          {showPackingFilter && (
+            <AppSelect
+              options={packingStatusOptions}
+              placeholder="Packing"
+              value={getSelectedOption(packingStatusOptions, filters.packing_status)}
+              onChange={(selectedOption) =>
+                handleSelectFilter("packing_status", selectedOption)
+              }
+            />
+          )}
 
           <AppSelect
             options={partyNameOptions}

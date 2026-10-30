@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RxCross2 } from "react-icons/rx";
 import { getColorLimitError } from "../../../../Utils/Common";
-import { getSkipPackingRows } from "../packingUtils";
+import { getNextRound, getSkipPackingRows } from "../packingUtils";
 
 const inputClass =
   "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-400 block w-full p-2 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white";
@@ -12,8 +12,18 @@ const SkipToPackingModal = ({ embroidery, sourceStep, sourceRecord, onClose }) =
   const navigate = useNavigate();
   const location = useLocation();
   const availability = sourceRecord?.processAvailability;
+  //STITCHING IS PACKED FROM ITS OWN ROWS (WITH THEIR PRICES), THE OTHER STEPS FROM THE ORDER'S SHIRT COLORS
+  const isStitching = sourceStep === "Stitching";
+  const round = getNextRound(availability);
   const [rows, setRows] = useState(() =>
-    getSkipPackingRows(availability, embroidery?.shirt)
+    getSkipPackingRows(
+      availability,
+      (isStitching
+        ? sourceRecord?.suits_category?.length
+          ? sourceRecord.suits_category
+          : sourceRecord?.dupatta_category
+        : embroidery?.shirt) || []
+    )
   );
 
   useEffect(() => {
@@ -48,6 +58,15 @@ const SkipToPackingModal = ({ embroidery, sourceStep, sourceRecord, onClose }) =
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isStitching) {
+      navigate(`/dashboard/packing-details/${sourceRecord.id}`, {
+        state: {
+          from: location.pathname,
+          pack_rows: rows.map((row) => ({ color: row.color, quantity: row.received })),
+        },
+      });
+      return;
+    }
     navigate("/dashboard/packing-details/null", {
       state: {
         embroidery_Id: sourceRecord.embroidery_Id || sourceRecord.id,
@@ -58,6 +77,7 @@ const SkipToPackingModal = ({ embroidery, sourceStep, sourceRecord, onClose }) =
         suits_category: rows,
         source_step: sourceStep,
         source_id: sourceRecord.id,
+        round,
       },
     });
   };
@@ -77,7 +97,9 @@ const SkipToPackingModal = ({ embroidery, sourceStep, sourceRecord, onClose }) =
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               Move To Packing
             </h3>
-          
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
+              Round {round.no} · {round.available} of {round.capacity} available
+            </p>
           </div>
           <button
             onClick={onClose}

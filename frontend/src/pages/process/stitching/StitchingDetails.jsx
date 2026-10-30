@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   generateStitchingBillAsync,
@@ -11,11 +11,19 @@ import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
 
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
-import { formatReadableDate, getRecordForId } from "../../../Utils/Common";
+import {
+  blurOnWheel,
+  formatReadableDate,
+  getInitialReceived,
+  getReceivedError,
+  getRecordForId,
+} from "../../../Utils/Common";
 import toast from "react-hot-toast";
 import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import ButtonSpinner from "../../../Component/Common/button/ButtonSpinner";
+import SkipToPackingModal from "../Packing/components/SkipToPackingModal";
+import { StitchingPackingIcon } from "../Packing/components/PackingStatusIcon";
 
 const StitchingDetails = () => {
   const { id } = useParams();
@@ -34,6 +42,7 @@ const StitchingDetails = () => {
   const [isGenerateGatePassOpen, setisGenerateGatePassOpen] = useState(false);
   const [processBillModal, setProcessBillModal] = useState(false);
   const [processBillData, setProcessBillData] = useState({});
+  const [isPackingModalOpen, setPackingModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     id: id,
@@ -52,7 +61,7 @@ const StitchingDetails = () => {
         suits_category:
           SingleStitching.suits_category?.map((item) => ({
             id: item.id,
-            return_quantity: item.recieved || item.quantity_in_no,
+            return_quantity: getInitialReceived(SingleStitching, item.recieved, item.quantity_in_no),
             quantity_in_no: item.quantity_in_no,
             cost_price: item.cost_price,
             sale_price: item.sale_price,
@@ -68,10 +77,8 @@ const StitchingDetails = () => {
 
   const handleInputChange = (category, index, field, value) => {
     if (field === "return_quantity") {
-      const sentQuantity = Number(formData?.[category]?.[index]?.quantity_in_no || 0);
-      if (Number(value || 0) > sentQuantity) {
-        return toast.error("Received quantity cannot be greater than sent quantity");
-      }
+      const error = getReceivedError(value, formData?.[category]?.[index]?.quantity_in_no);
+      if (error) return toast.error(error);
     }
 
     setFormData((prevState) => ({
@@ -225,7 +232,10 @@ const StitchingDetails = () => {
             </div>
             <div className="box">
               <span className="font-medium ">Project Status:</span>
-              <span> <StatusChip status={SingleStitching?.project_status} fallback="" /></span>
+              <span className="inline-flex items-center gap-2">
+                <StatusChip status={SingleStitching?.project_status} fallback="" />
+                <StitchingPackingIcon stitching={SingleStitching} />
+              </span>
             </div>
             <div className="box">
               <span className="font-medium">Date:</span>
@@ -274,11 +284,11 @@ const StitchingDetails = () => {
                         </p>
                         {/* RETURN QUANTITY */}
                         <input
-                          type="text"
+                          type="number"
                           placeholder="R.Q"
                           className="bg-[#EEEEEE] py-1 border-gray-300 w-[4.5rem] px-1 rounded-sm text-gray-900 dark:text-gray-900"
                           value={
-                            formData?.suits_category[index]?.return_quantity ||
+                            formData?.suits_category[index]?.return_quantity ??
                             ""
                           }
                           onChange={(e) =>
@@ -289,6 +299,7 @@ const StitchingDetails = () => {
                               e.target.value
                             )
                           }
+                          onWheel={blurOnWheel}
                         />
                       </div>
                     ))}
@@ -348,16 +359,25 @@ const StitchingDetails = () => {
               Generate Gate Pass
             </button>
           )}
+          {/* PACKING IS DONE IN ROUNDS UNTIL NOTHING RECEIVED IS LEFT */}
           {SingleStitching?.project_status === "Completed" &&
-            !SingleStitching?.packed &&
-              <Link
+            Number(SingleStitching?.processAvailability?.available || 0) > 0 && (
+              <button
+                onClick={() => setPackingModalOpen(true)}
                 className="px-4 py-2.5 text-sm rounded bg-[#252525] dark:bg-gray-200 text-white dark:text-gray-800"
-                to={`/dashboard/packing-details/${SingleStitching?.id}`}
               >
-               Move To Packing
-              </Link>
-            }
+                Move To Packing
+              </button>
+            )}
         </div>
+
+        {isPackingModalOpen && (
+          <SkipToPackingModal
+            sourceStep="Stitching"
+            sourceRecord={SingleStitching}
+            onClose={() => setPackingModalOpen(false)}
+          />
+        )}
 
         {isUpdateReceivedConfirmOpen && (
           <ConfirmationModal

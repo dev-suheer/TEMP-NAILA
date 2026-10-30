@@ -10,8 +10,11 @@ import { StitchingModel } from "../../models/Process/StitchingModel.js";
 import { StoneModel } from "../../models/Process/StoneModel.js";
 import { buildDateRangeQuery, getPaginationParams } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   buildProcessAvailability,
   getActiveNextSteps,
+  getOrdersPackingProgress,
+  loadPackingInfoSafely,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
 
@@ -296,14 +299,20 @@ export const getAllEmbroidery = async (req, res, next) => {
       .limit(limit)
       .sort({ createdAt: -1 });
     const total = await EmbroideryModel.countDocuments(query);
+    //WORKED OUT FOR THIS PAGE ONLY, IN A FIXED NUMBER OF QUERIES
+    const packingProgress = await loadPackingInfoSafely(() => getOrdersPackingProgress(data), data);
+    setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
-      data,
+      data: data.map((order, index) => ({
+        ...order.toJSON(),
+        packing_status: packingProgress[index].packing_status,
+        packing_legacy: packingProgress[index].legacy,
+      })),
       page,
       limit,
       totalRecords: total,
     };
-    setMongoose();
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -320,11 +329,17 @@ export const getEmbroideryById = async (req, res, next) => {
       sourceStep: ProcessStep.EMBROIDERY,
       sourceId: id,
     });
+    const [packingProgress] = await loadPackingInfoSafely(
+      () => getOrdersPackingProgress([data]),
+      [data]
+    );
 
     setMongoose();
     return res.status(200).json({
       ...data.toObject({ virtuals: true }),
       processAvailability,
+      packing_status: packingProgress.packing_status,
+      packing_legacy: packingProgress.legacy,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -352,10 +367,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (s) =>  s._id.toString() === id
         );
         if (shirtItem) {
-          if (Number(received || 0) > Number(shirtItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          shirtItem.received = received;
+          assertReceivedQuantity(received, shirtItem.quantity_in_no);
+          shirtItem.received = Number(received || 0);
         }
       });
     }
@@ -366,10 +379,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (d) => d._id.toString() === id
         );
         if (dupattaItem) {
-          if (Number(received || 0) > Number(dupattaItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          dupattaItem.received = received;
+          assertReceivedQuantity(received, dupattaItem.quantity_in_no);
+          dupattaItem.received = Number(received || 0);
         }
       });
     }
@@ -380,10 +391,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (t) => t._id.toString() === id
         );
         if (trouserItem) {
-          if (Number(received || 0) > Number(trouserItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          trouserItem.received = received;
+          assertReceivedQuantity(received, trouserItem.quantity_in_no);
+          trouserItem.received = Number(received || 0);
         }
       });
     }
@@ -391,7 +400,7 @@ export const updateEmbroidery = async (req, res, next) => {
       const checkInvalidValue = (value) => {
         return isNaN(value) || value === undefined || value === null
           ? 0
-          : value;
+          : Number(value);
       };
       const calculateTotalRecieved = () => {
         let totalRecieved = 0;

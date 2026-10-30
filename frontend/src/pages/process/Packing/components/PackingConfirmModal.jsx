@@ -4,6 +4,7 @@ import { AiOutlinePicture } from "react-icons/ai";
 import { TbShirtOff } from "react-icons/tb";
 import { formatAmount } from "../../../../Utils/Common";
 import ButtonSpinner from "../../../../Component/Common/button/ButtonSpinner";
+import { getPenaltyBreakdown } from "../packingUtils";
 
 const CheckRow = ({ icon: Icon, label, active, activeClass, value }) => (
   <div className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-600 dark:bg-gray-800">
@@ -135,7 +136,7 @@ const PackingConfirmModal = ({
                 Penalties to party accounts
               </h4>
               <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-600 dark:border-gray-600">
-                {penaltyRows.map(({ party, quantity, penalty_amount, additional_cost, total_penalty }) => (
+                {penaltyRows.map(({ party, quantity, labour_quantity, penalty_amount, additional_cost, total_penalty }) => (
                   <li
                     key={`${party.process_step}:${party.process_id}`}
                     className="flex items-start justify-between gap-3 px-3 py-2 text-sm"
@@ -148,7 +149,12 @@ const PackingConfirmModal = ({
                         </span>
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-300">
-                        {quantity} × {party.rate} = {formatAmount(penalty_amount)}
+                        {getPenaltyBreakdown({
+                          quantity,
+                          labour_quantity,
+                          rate: party.rate,
+                          penalty_amount,
+                        })}
                         {additional_cost > 0 && ` + ${formatAmount(additional_cost)} additional`}
                       </p>
                     </div>

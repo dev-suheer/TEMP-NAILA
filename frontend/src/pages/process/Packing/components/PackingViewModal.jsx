@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import Chip from "../../../../Component/Common/Chip";
 import { formatAmount, formatReadableDate } from "../../../../Utils/Common";
+import { getPackingSourceLabel, getPenaltyBreakdown } from "../packingUtils";
 
 const PackingViewModal = ({ packing, onClose }) => {
   return (
@@ -20,11 +21,7 @@ const PackingViewModal = ({ packing, onClose }) => {
               <Chip>
                 S.N {packing.serial_No} / M.N {packing.Manual_No}
               </Chip>
-              <Chip>
-                {packing.packing_Id
-                  ? `Stitching · ${packing.stitching_partyName}`
-                  : "Direct"}
-              </Chip>
+              <Chip>{getPackingSourceLabel(packing)}</Chip>
               <Chip variant={packing.useBags ? "success" : "muted"}>
                 Bags {packing.useBags ? "used" : "not used"}
               </Chip>
@@ -124,7 +121,7 @@ const PackingViewModal = ({ packing, onClose }) => {
                         </span>
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-300">
-                        {penalty.quantity} × {penalty.rate} = {formatAmount(penalty.penalty_amount)}
+                        {getPenaltyBreakdown(penalty)}
                         {penalty.additional_cost > 0 &&
                           ` + ${formatAmount(penalty.additional_cost)} additional`}
                       </p>

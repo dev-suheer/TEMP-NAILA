@@ -15,10 +15,13 @@ import {
   toStitchType,
 } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   assertSourceCanCreateNextStep,
   buildProcessAvailability,
+  isStitchingPacked,
   ProcessStep,
   sumPackingQuantity,
+  syncPackingCounters,
 } from "../../utils/ProcessQuantity.js";
 import {
   addBPairStock,
@@ -168,12 +171,14 @@ export const getAllStitching = async (req, res, next) => {
     const project_status = req.query.project_status || "";
     const design_no = req.query.design_no || "";
     const partyName = req.query.partyName || "";
+    const packing_status = req.query.packing_status || "";
     let query = {};
 
     if (Manual_No) query.Manual_No = Manual_No;
     if (project_status) query.project_status = project_status;
     if (design_no) query.design_no = design_no;
     if (partyName) query.partyName = partyName;
+    if (packing_status) query.packing_status = packing_status;
 
     const data = await StitchingModel.find(query)
       .skip((page - 1) * limit)
@@ -252,8 +257,11 @@ export const updateStitching = async (req, res, next) => {
               if (!toUpdate) {
                 throw new Error("Stitching row not found");
               }
-              if (Number(return_quantity || 0) > Number(toUpdate.quantity_in_no || 0)) {
-                throw new Error("Received quantity cannot be greater than sent quantity");
+              assertReceivedQuantity(return_quantity, toUpdate.quantity_in_no);
+              if (Number(return_quantity || 0) < Number(toUpdate.packed_quantity || 0)) {
+                throw new Error(
+                  `Received quantity of ${toUpdate.color} cannot be less than its packed quantity ${toUpdate.packed_quantity}`
+                );
               }
               let new_r_quantity = stitching.r_quantity - toUpdate.recieved;
               toUpdate.recieved = return_quantity;
@@ -276,6 +284,14 @@ export const updateStitching = async (req, res, next) => {
       }
 
       await stitching.save({ session });
+      //THE PACKING STATUS COMPARES PACKED WITH RECEIVED, SO IT FOLLOWS A RECEIVED CHANGE
+      if (stitching.packed_quantity > 0) {
+        await syncPackingCounters({
+          sourceStep: ProcessStep.STITCHING,
+          sourceId: stitching._id,
+          session,
+        });
+      }
       return res
         .status(200)
         .json({ success: true, message: "Updated Successfully" });
@@ -298,7 +314,7 @@ export const deleteStitching = async (req, res, next) => {
     if (data.bill_generated) {
       throw new Error("Deletion not permitted. This stitching step bill has already been generated.");
     }
-    if (data.packed) {
+    if (isStitchingPacked(data)) {
       throw new Error("Deletion not permitted. This stitching step has already been packed.");
     }
     if(data.lace_quantity > 0 && data.lace_category !== null) {
@@ -511,28 +527,36 @@ export const addInStockFromPackaging = async (req,res,next) => {
       if(checkPicturesOrder && checkPicturesOrder.status === 'Pending'){
         throw new Error("Please complete the pictures order to add suits stock");
       }
-      const rows = [...(suits_category || []), ...(dupatta_category || [])];
+      //A COLOR LEFT AT 0 IS NOT PART OF THIS ROUND
+      const rows = [...(suits_category || []), ...(dupatta_category || [])].filter(
+        (item) => Number(item.return_quantity) > 0
+      );
+      if (rows.length === 0) throw new Error("Enter the quantity to pack");
 
       //A PACKING IS COUNTED AGAINST THE STEP IT CAME FROM
       const sourceStep = packing_Id ? ProcessStep.STITCHING : source_step;
       const sourceId = packing_Id || source_id;
-      if (!packing_Id) {
-        if (
-          ![ProcessStep.EMBROIDERY, ProcessStep.CUTTING, ProcessStep.STONE].includes(sourceStep)
-        ) {
-          throw new Error("Invalid packing source");
-        }
-        await assertSourceCanCreateNextStep({
-          sourceStep,
-          sourceId,
-          requestedQuantity: sumPackingQuantity(rows),
-          requestedRows: rows.map((item) => ({
-            color: item.color,
-            quantity: item.return_quantity,
-          })),
-          session,
-        });
+      if (
+        !packing_Id &&
+        ![ProcessStep.EMBROIDERY, ProcessStep.CUTTING, ProcessStep.STONE].includes(sourceStep)
+      ) {
+        throw new Error("Invalid packing source");
       }
+      //PACKING IS DONE IN ROUNDS, EACH ROUND CAN ONLY PACK WHAT IS STILL AVAILABLE
+      const { source } = await assertSourceCanCreateNextStep({
+        sourceStep,
+        sourceId,
+        requestedQuantity: sumPackingQuantity(rows),
+        requestedRows: rows.map((item) => ({
+          color: item.color,
+          quantity: item.return_quantity,
+        })),
+        session,
+      });
+      const lastRound = await PackingModel.findOne({ source_step: sourceStep, source_id: sourceId })
+        .sort({ round_no: -1 })
+        .select("round_no")
+        .session(session);
 
       //AN ORDER WITH NO EARLIER PACKING (FLAG OR PACKED SUITS RECORD) HAS ALL ITS PACKINGS TRACKED
       const EmbroideryData = await EmbroideryModel.findById(embroidery_Id).session(session);
@@ -552,11 +576,14 @@ export const addInStockFromPackaging = async (req,res,next) => {
               session,
             })
           : [];
-      const parties = penaltyParties.map(({ process_step, process_id, partyName }) => ({
-        process_step,
-        process_id,
-        partyName,
-      }));
+      //ONLY THE PARTIES THAT DAMAGED THE SUITS, NOT THE LABOUR ONLY DEDUCTIONS
+      const parties = penaltyParties
+        .filter((party) => party.quantity > 0)
+        .map(({ process_step, process_id, partyName }) => ({
+          process_step,
+          process_id,
+          partyName,
+        }));
       const common = {
         useBags,
         d_no,
@@ -582,18 +609,6 @@ export const addInStockFromPackaging = async (req,res,next) => {
        EmbroideryData.next_steps.packing = true;
        await EmbroideryData.save({ session });
 
-       //UPDATING PACKING STATUS FOR STITCHING
-       let stitching_partyName = null;
-       if(packing_Id){
-        const stitching = await StitchingModel.findById(packing_Id).session(session);
-        if(stitching.packed){
-          throw new Error("This stitching is slready packed");
-        };
-        stitching.packed = true;
-        await stitching.save({session});
-        stitching_partyName = stitching.partyName;
-       };
-
       const sumRows = (field) =>
         packedRows.reduce((total, row) => total + row[field], 0);
       await PackingModel.create(
@@ -603,7 +618,9 @@ export const addInStockFromPackaging = async (req,res,next) => {
             packing_Id: packing_Id || null,
             source_step: sourceStep,
             source_id: sourceId,
-            stitching_partyName,
+            stitching_partyName: packing_Id ? source.partyName : null,
+            source_partyName: source.partyName || null,
+            round_no: (lastRound?.round_no || 0) + 1,
             serial_No,
             Manual_No,
             design_no: d_no,
@@ -620,6 +637,7 @@ export const addInStockFromPackaging = async (req,res,next) => {
         ],
         { session }
       );
+      await syncPackingCounters({ sourceStep, sourceId, embroidery_Id, session });
     });
     return res
     .status(200)

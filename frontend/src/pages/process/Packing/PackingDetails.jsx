@@ -11,11 +11,14 @@ import { getOrderProcessPartiesAsync } from "../../../features/B_pairSlice";
 import { formatAmount, getRecordForId } from "../../../Utils/Common";
 import PageLoader from "../../../Component/Loader/PageLoader";
 import {
+  getNextRound,
   getPenaltyStatus,
   getRowQuantities,
+  getStitchingRoundRows,
   isPackingRowInvalid,
   toPackingRow,
 } from "./packingUtils";
+import Chip from "../../../Component/Common/Chip";
 import PackingOrderSummary from "./components/PackingOrderSummary";
 import PackingStockSection from "./components/PackingStockSection";
 import BPairPenaltySection from "./components/BPairPenaltySection";
@@ -63,6 +66,8 @@ const PackingDetails = () => {
     suits_category,
     source_step,
     source_id,
+    pack_rows,
+    round: stateRound,
   } = location.state || {};
 
   const stitching =
@@ -95,13 +100,12 @@ const PackingDetails = () => {
       serial_No: stitching.serial_No,
     };
 
+    //A STITCHING ROUND PACKS WHAT WAS CHOSEN IN MOVE TO PACKING, OR EVERYTHING STILL LEFT
     if (stitching?.suits_category?.length > 0) {
       setFormData((prev) => ({
         ...prev,
         ...stitchingDetails,
-        suits_category: stitching.suits_category.map((item) =>
-          toPackingRow(item, item.recieved)
-        ),
+        suits_category: getStitchingRoundRows(stitching.suits_category, pack_rows),
         dupatta_category: [],
       }));
     } else if (stitching?.dupatta_category?.length > 0) {
@@ -109,9 +113,7 @@ const PackingDetails = () => {
         ...prev,
         ...stitchingDetails,
         suits_category: [],
-        dupatta_category: stitching.dupatta_category.map((item) =>
-          toPackingRow(item, item.recieved)
-        ),
+        dupatta_category: getStitchingRoundRows(stitching.dupatta_category, pack_rows),
       }));
     } else if (id === "null" && suits_category?.length > 0) {
       setFormData((prev) => ({
@@ -178,6 +180,20 @@ const PackingDetails = () => {
     }));
   };
 
+  const handleDefaultStitchTypeChange = (stitchType) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      suits_category: prevState.suits_category?.map((item) => ({
+        ...item,
+        stitch_type: stitchType,
+      })),
+      dupatta_category: prevState.dupatta_category?.map((item) => ({
+        ...item,
+        stitch_type: stitchType,
+      })),
+    }));
+  };
+
   const handlePenaltyChange = (key, field, value) => {
     setPenaltyValues((prev) => ({
       ...prev,
@@ -209,10 +225,11 @@ const PackingDetails = () => {
     e.preventDefault();
     const payload = {
       ...formData,
-      b_pair_parties: penaltyRows.map(({ party, quantity, additional_cost }) => ({
+      b_pair_parties: penaltyRows.map(({ party, quantity, labour_quantity, additional_cost }) => ({
         process_step: party.process_step,
         process_id: party.process_id,
         quantity,
+        labour_quantity,
         additional_cost,
       })),
     };
@@ -253,6 +270,8 @@ const PackingDetails = () => {
     stockRows.some(isPackingRowInvalid) ||
     !penaltyStatus.isComplete;
 
+  const round = stitching ? getNextRound(stitching.processAvailability) : stateRound;
+
   const stockSections = [
     { key: "suits_category", title: "Shirt Data For Stock" },
     { key: "dupatta_category", title: "Duppata Data For Stock" },
@@ -268,6 +287,11 @@ const PackingDetails = () => {
           <h1 className="text-gray-800 dark:text-gray-200 text-xl md:text-2xl lg:text-3xl font-medium">
             Packing Details
           </h1>
+          {round && (
+            <Chip variant="primary" className="text-xs">
+              Round {round.no} · {round.available} of {round.capacity} available
+            </Chip>
+          )}
         </div>
 
         <PackingOrderSummary
@@ -284,6 +308,7 @@ const PackingDetails = () => {
         <PackingStockSection
           defaultPrices={defaultPrices}
           onDefaultPriceChange={handleDefaultPriceChange}
+          onDefaultStitchTypeChange={handleDefaultStitchTypeChange}
           sections={stockSections}
           onRowChange={handleInputChange}
         />

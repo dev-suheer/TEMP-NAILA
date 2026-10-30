@@ -107,7 +107,10 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
   };
 
   const inputClass =
-    "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block w-full p-2 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white";
+    "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block p-2 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white";
+
+  const giveGridClass =
+    "grid-cols-[minmax(0,1fr)_4.5rem_2.25rem] sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_6rem_2.25rem] items-center gap-2";
 
   const loading = buyerBillDetailsLoading || bPairStockForBillLoading;
 
@@ -116,16 +119,15 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
       aria-hidden="true"
       className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full min-h-screen bg-gray-800 bg-opacity-50"
     >
-      <div className="relative w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-md shadow dark:bg-gray-700">
+      <div className="relative flex flex-col w-[95%] max-w-5xl max-h-[90vh] overflow-hidden bg-white rounded-md shadow dark:bg-gray-700">
         {/* ------------- HEADER ------------- */}
-        <div className="flex items-start justify-between gap-4 p-5 border-b dark:border-gray-600">
+        <div className="flex shrink-0 items-start justify-between gap-4 px-5 py-4 border-b dark:border-gray-600">
           <div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               Exchange B-Pair Suits
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
               Bill {bill.serialNumber}-{bill.autoSN} · {bill.name}
-              is involved, quantities must be equal
             </p>
           </div>
           <button
@@ -152,6 +154,7 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
           </button>
         </div>
 
+        <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="py-16 flex justify-center items-center">
             <div
@@ -163,13 +166,10 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 p-5 lg:grid-cols-2 text-gray-900 dark:text-gray-100">
+          <div className="space-y-5 p-5 text-gray-900 dark:text-gray-100">
             {/* ------------- TAKE BACK ------------- */}
             <div>
-              <h4 className="mb-1 text-sm font-semibold">Take back from buyer</h4>
-              <p className="mb-3 text-xs text-gray-500 dark:text-gray-300">
-                Suits the buyer currently holds from this bill
-              </p>
+              <h4 className="mb-2 text-sm font-semibold">Take back from buyer</h4>
               <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-600">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-gray-700 bg-gray-100 dark:bg-gray-800 dark:text-gray-200">
@@ -179,7 +179,7 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                       <th className="px-3 py-2">Color</th>
                       <th className="px-3 py-2">Type</th>
                       <th className="px-3 py-2 text-center">Holds</th>
-                      <th className="px-3 py-2">Take Back</th>
+                      <th className="px-3 py-2 text-center">Take Back</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -194,9 +194,13 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                         return (
                           <tr
                             key={holding.bpair_id}
-                            className="border-t border-gray-200 dark:border-gray-600"
+                            className={`border-t border-gray-200 dark:border-gray-600 ${
+                              quantity > 0 && !invalid
+                                ? "bg-gray-50 dark:bg-gray-800/40"
+                                : ""
+                            }`}
                           >
-                            <td className="px-3 py-2">{holding.d_no}</td>
+                            <td className="px-3 py-2 font-medium">{holding.d_no}</td>
                             <td className="px-3 py-2">{holding.category}</td>
                             <td className="px-3 py-2">{holding.color}</td>
                             <td className="px-3 py-2">{holding.stitch_type}</td>
@@ -209,7 +213,8 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                                 min={0}
                                 max={holding.quantity}
                                 placeholder="0"
-                                className={`${inputClass} w-20 ${
+                                aria-label={`Take back quantity for design ${holding.d_no}`}
+                                className={`${inputClass} mx-auto w-20 text-center ${
                                   invalid ? "!border-red-500" : ""
                                 }`}
                                 value={value}
@@ -241,30 +246,36 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
 
             {/* ------------- GIVE ------------- */}
             <div>
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="mb-1 text-sm font-semibold">Give to buyer</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
-                    Any design, category or color from B-Pair stock
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setGiveRows((prev) => [...prev, emptyGiveRow])}
-                  className="inline-block rounded-md border border-gray-700 bg-gray-600 p-1.5 hover:bg-gray-800"
+              <h4 className="mb-2 text-sm font-semibold">Give to buyer</h4>
+              <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-600">
+                <div
+                  className={`${giveGridClass} hidden px-3 py-2 text-xs font-bold sm:grid text-gray-700 bg-gray-100 dark:bg-gray-800 dark:text-gray-200`}
                 >
-                  <IoAdd size={18} className="text-white" />
-                </button>
-              </div>
-              <div className="space-y-3">
+                  <span>Design</span>
+                  <span>Color</span>
+                  <span className="text-center">Qty</span>
+                  <span className="sr-only">Remove</span>
+                </div>
                 {giveRows.map((row, index) => {
                   const colorOptions = bPairStockForBill.filter(
                     (item) => item.d_no === row.d_no
                   );
+                  const stock = bPairStockForBill.find(
+                    (item) => item.id === row.bpair_id
+                  );
+                  const quantity = toQuantity(row.quantity);
+                  const quantityInvalid =
+                    row.quantity !== "" &&
+                    (!Number.isInteger(quantity) ||
+                      quantity <= 0 ||
+                      (stock && quantity > stock.quantity));
                   return (
-                    <div key={index} className="flex items-center gap-2">
+                    <div
+                      key={index}
+                      className={`${giveGridClass} grid border-t border-gray-200 px-3 py-2 dark:border-gray-600`}
+                    >
                       <AppSelect
-                        className="w-40 shrink-0"
+                        className="col-span-3 min-w-0 sm:col-span-1"
                         options={designOptions}
                         placeholder="Design No"
                         value={
@@ -280,7 +291,7 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                         }
                       />
                       <ThemedSelect
-                        className="w-full"
+                        className="min-w-0"
                         value={row.bpair_id}
                         onChange={(e) =>
                           updateGiveRow(index, { bpair_id: e.target.value })
@@ -298,8 +309,12 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                       <input
                         type="number"
                         min={1}
-                        placeholder="Qty"
-                        className={`${inputClass} w-20 shrink-0`}
+                        max={stock?.quantity}
+                        placeholder="0"
+                        aria-label="Quantity to give"
+                        className={`${inputClass} w-full text-center ${
+                          quantityInvalid ? "!border-red-500" : ""
+                        }`}
                         value={row.quantity}
                         onChange={(e) =>
                           updateGiveRow(index, { quantity: e.target.value })
@@ -307,26 +322,42 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
                       />
                       <button
                         type="button"
+                        title="Remove row"
+                        aria-label="Remove row"
                         disabled={giveRows.length === 1}
                         onClick={() =>
                           setGiveRows((prev) => prev.filter((_, i) => i !== index))
                         }
-                        className="shrink-0 rounded-md border border-red-700 bg-red-700 p-1.5 text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-300"
                       >
                         <IoTrashOutline size={18} />
                       </button>
                     </div>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setGiveRows((prev) => [...prev, emptyGiveRow])}
+                  className="flex w-full items-center justify-center gap-1.5 border-t border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  <IoAdd size={18} />
+                  Add suit
+                </button>
               </div>
             </div>
 
             {/* ------------- NOTE ------------- */}
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-sm font-semibold">Note</label>
+            <div>
+              <label
+                htmlFor="bpair-exchange-note"
+                className="mb-2 block text-sm font-semibold"
+              >
+                Note
+              </label>
               <textarea
+                id="bpair-exchange-note"
                 rows={2}
-                className={inputClass}
+                className={`${inputClass} w-full`}
                 placeholder="Reason for exchange (optional)"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -334,15 +365,24 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
             </div>
           </div>
         )}
+        </div>
 
         {/* ------------- FOOTER ------------- */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 dark:border-gray-600">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-5 py-4 dark:border-gray-600">
           <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
             <span>
               Taking back <strong>{totalTakeBack}</strong> · Giving{" "}
               <strong>{totalGive}</strong>
             </span>
-            <Chip variant={isBalanced ? "success" : "warning"}>
+            <Chip
+              variant={
+                isBalanced
+                  ? "success"
+                  : totalTakeBack || totalGive
+                    ? "warning"
+                    : "muted"
+              }
+            >
               {isBalanced ? "Balanced" : "Quantities must match"}
             </Chip>
             {hasOverlap && (
@@ -353,8 +393,9 @@ const BPairExchange = ({ bill, closeModal, onExchanged }) => {
           </div>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={closeModal}
-              className="px-4 py-2 text-sm rounded bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white"
+              className="px-4 py-2 text-sm rounded bg-gray-200 text-gray-900 hover:bg-gray-300 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
             >
               Cancel
             </button>

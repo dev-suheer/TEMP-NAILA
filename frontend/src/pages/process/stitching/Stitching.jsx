@@ -8,13 +8,13 @@ import {
 } from "../../../features/stitching";
 import { MdOutlineDelete } from "react-icons/md";
 import DeleteModal from "../../../Component/Modal/DeleteModal";
-import { LuPackageCheck } from "react-icons/lu";
 import ProcessFilters from "../../../Component/ProcessFilters/ProcessFilters";
 import Pagination from "../../../Component/Common/Pagination";
 import { formatReadableDate, getPageLimit } from "../../../Utils/Common";
 import ColorList from "../../../Component/Common/ColorList";
 import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
+import { StitchingPackingIcon } from "../Packing/components/PackingStatusIcon";
 
 const Stitching = () => {
   const dispatch = useDispatch();
@@ -70,6 +70,7 @@ const Stitching = () => {
           {/* SEARCH FILTERS */}
           <ProcessFilters
             handlers={{ dispatchFunction: GetAllStitching, liftUpFiltersData }}
+            showPackingFilter
           />
         </div>
 
@@ -131,9 +132,7 @@ const Stitching = () => {
                           scope="row"
                         >
                           <div className="flex items-center justify-center gap-2">
-                            <span className="text-green-500">
-                              {data?.packed && <LuPackageCheck size={20} />}
-                            </span>
+                            <StitchingPackingIcon stitching={data} />
                             <div>
                               <span className="text-red-500">
                                 {" "}
@@ -166,7 +165,9 @@ const Stitching = () => {
                           <Link to={`/dashboard/stitching-details/${data.id}`}>
                             <FaEye size={20} className="cursor-pointer" />
                           </Link>
-                          {(!data.bill_generated && !data.packed) && (
+                          {!data.bill_generated &&
+                            !(data.packed_quantity > 0) &&
+                            !data.packed_before_tracking && (
                             <button onClick={() => openDeleteModal(data.id)}>
                               <MdOutlineDelete
                                 size={20}

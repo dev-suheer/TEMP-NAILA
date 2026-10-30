@@ -192,9 +192,25 @@ export const getPenaltyParties = async ({
     );
     if (!party) throw new Error("Selected party is not part of this order");
 
-    const quantity = Number(selected.quantity);
-    if (!Number.isInteger(quantity) || quantity <= 0) {
+    const quantity = Number(selected.quantity || 0);
+    if (!Number.isInteger(quantity) || quantity < 0) {
       throw new Error(`Invalid B Pair quantity for ${party.partyName}`);
+    }
+    const labour_quantity = Number(selected.labour_quantity || 0);
+    if (!Number.isInteger(labour_quantity) || labour_quantity < 0) {
+      throw new Error(`Invalid labour quantity for ${party.partyName}`);
+    }
+    if (quantity + labour_quantity === 0) {
+      throw new Error(`Enter a B Pair or labour quantity for ${party.partyName}`);
+    }
+    //CALENDER IS BILLED PER METER, SO A PER SUIT LABOUR DEDUCTION DOES NOT APPLY
+    if (labour_quantity > 0 && party.unit) {
+      throw new Error(`Labour deduction is not allowed for ${party.process_step}`);
+    }
+    if (quantity + labour_quantity > total_quantity) {
+      throw new Error(
+        `B Pair and labour quantity for ${party.partyName} cannot be more than total B Pair quantity ${total_quantity}`
+      );
     }
     const additional_cost = Number(selected.additional_cost || 0);
     if (!Number.isFinite(additional_cost) || additional_cost < 0) {
@@ -214,11 +230,12 @@ export const getPenaltyParties = async ({
       throw new Error(`Process account not found for ${party.partyName}`);
     }
 
-    const penalty_amount = Math.round(quantity * party.rate);
+    const penalty_amount = Math.round((quantity + labour_quantity) * party.rate);
     parties.push({
       ...party,
       account_id: account._id,
       quantity,
+      labour_quantity,
       penalty_amount,
       additional_cost,
       total_penalty: penalty_amount + additional_cost,
@@ -257,6 +274,13 @@ export const applyPackingPenalties = async ({
       });
     const additionalNote =
       party.additional_cost > 0 ? ` + Additional ${party.additional_cost}` : "";
+    //E.G. "3", "3 labour" OR "2 + 3 labour"
+    const quantityNote = [
+      party.quantity > 0 ? `${party.quantity}` : "",
+      party.labour_quantity > 0 ? `${party.labour_quantity} labour` : "",
+    ]
+      .filter(Boolean)
+      .join(" + ");
 
     account.virtual_account = {
       total_debit: new_total_debit,
@@ -266,7 +290,7 @@ export const applyPackingPenalties = async ({
     };
     account.credit_debit_history.push({
       date,
-      particular: `B-Pair · S.N:${serial_No}/M.N:${Manual_No}/D.N:${design_no} · ${party.quantity} · ${party.penalty_amount}${additionalNote}`,
+      particular: `B-Pair · S.N:${serial_No}/M.N:${Manual_No}/D.N:${design_no} · ${quantityNote} · ${party.penalty_amount}${additionalNote}`,
       debit: party.total_penalty,
       credit: 0,
       balance: new_total_balance,
@@ -282,6 +306,7 @@ export const applyPackingPenalties = async ({
       account_id: account._id,
       entry_id: entry._id,
       quantity: party.quantity,
+      labour_quantity: party.labour_quantity,
       rate: party.rate,
       penalty_amount: party.penalty_amount,
       additional_cost: party.additional_cost,

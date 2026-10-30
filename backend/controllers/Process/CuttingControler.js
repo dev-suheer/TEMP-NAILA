@@ -4,9 +4,12 @@ import { processBillsModel } from "../../models/Process/ProcessBillsModel.js";
 import { setMongoose } from "../../utils/Mongoose.js";
 import { getPaginationParams } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   assertSourceCanCreateNextStep,
   assertSourceHasNoNextSteps,
   buildProcessAvailability,
+  getRecordsPackingLeft,
+  loadPackingInfoSafely,
   ProcessStep,
 } from "../../utils/ProcessQuantity.js";
 
@@ -123,12 +126,8 @@ export const updateCutting = async (req, res, next) => {
         );
         if (!incoming) return row;
 
-        const received = Number(incoming.received || 0);
-        if (received > Number(row.quantity || 0)) {
-          throw new Error("Received quantity cannot be greater than sent quantity");
-        }
-
-        row.received = received;
+        assertReceivedQuantity(incoming.received, row.quantity);
+        row.received = Number(incoming.received || 0);
         return row;
       });
       const updatedReceivedQuantity = updatedRows.reduce(
@@ -145,9 +144,7 @@ export const updateCutting = async (req, res, next) => {
         updated: true,
       };
     } else if (r_quantity !== undefined && r_quantity !== null && r_quantity !== "") {
-      if (Number(r_quantity) > Number(cutting.T_Quantity || 0)) {
-        throw new Error("Invalid Recieved quantity");
-      }
+      assertReceivedQuantity(r_quantity, cutting.T_Quantity);
       updateQuery = {
         ...updateQuery,
         r_quantity,
@@ -187,14 +184,22 @@ export const getAllCutting = async (req, res, next) => {
       .limit(limit)
       .sort({ createdAt: -1 });
     const total = await CuttingModel.countDocuments(query);
+    //WHAT IS LEFT AT EACH PACKED CUTTING, FOR ITS PACKING ICON. WORKED OUT FOR THIS PAGE ONLY
+    const packingLeft = await loadPackingInfoSafely(
+      () => getRecordsPackingLeft({ sourceStep: ProcessStep.CUTTING, records: data }),
+      data
+    );
+    setMongoose();
     const response = {
       totalPages: Math.ceil(total / limit),
-      data,
+      data: data.map((cutting, index) => ({
+        ...cutting.toJSON(),
+        packing_left: packingLeft[index].left,
+      })),
       page,
       limit,
       totalRecords: total,
     };
-    setMongoose();
     return res.status(200).json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });

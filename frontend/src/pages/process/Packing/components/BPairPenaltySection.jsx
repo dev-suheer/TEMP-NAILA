@@ -3,7 +3,7 @@ import Chip from "../../../../Component/Common/Chip";
 import Loading from "../../../../Component/Loader/Loading";
 import { formatAmount } from "../../../../Utils/Common";
 import PackingSection from "./PackingSection";
-import { getPartyKey } from "../packingUtils";
+import { canDeductLabour, getPartyKey, getPenaltyBreakdown } from "../packingUtils";
 
 const withUnit = (value, unit) => `${value}${unit ? ` ${unit}` : ""}`;
 
@@ -53,8 +53,17 @@ const BPairPenaltySection = ({
                   <th className="px-3 py-2">Received</th>
                   <th className="px-3 py-2">Rate</th>
                   <th className="px-3 py-2">Bill</th>
-                  <th className="px-3 py-2 border-l border-gray-200 dark:border-gray-600">
-                    B-Pair Qty
+                  <th
+                    title="B-Pair suits this party damaged"
+                    className="px-3 py-2 border-l border-gray-200 dark:border-gray-600"
+                  >
+                    Damaged Qty
+                  </th>
+                  <th
+                    title="Already damaged suits this party worked on, deducted from its bill"
+                    className="px-3 py-2"
+                  >
+                    Labour Qty
                   </th>
                   <th className="px-3 py-2">Penalty</th>
                   <th className="px-3 py-2">Additional Cost</th>
@@ -63,9 +72,10 @@ const BPairPenaltySection = ({
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const { party, quantity, penalty_amount, total_penalty } = row;
+                  const { party, quantity, labour_quantity, penalty_amount, total_penalty } = row;
                   const key = getPartyKey(party);
                   const values = penaltyValues[key] || {};
+                  const charged = quantity > 0 || labour_quantity > 0;
                   return (
                     <tr
                       key={key}
@@ -108,9 +118,38 @@ const BPairPenaltySection = ({
                           onChange={(e) => onPenaltyChange(key, "quantity", e.target.value)}
                         />
                       </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(totalBPairQuantity - quantity, 0)}
+                          placeholder="0"
+                          aria-label={`Labour quantity for ${party.partyName}`}
+                          title={
+                            !party.bill_generated
+                              ? "Generate the bill first"
+                              : !canDeductLabour(party)
+                                ? `${party.process_step} is billed per meter`
+                                : ""
+                          }
+                          disabled={!party.bill_generated || !canDeductLabour(party)}
+                          className={`${penaltyInputClass} ${
+                            row.invalidLabour ? "border-red-500" : ""
+                          }`}
+                          value={canDeductLabour(party) ? values.labour_quantity ?? "" : ""}
+                          onChange={(e) =>
+                            onPenaltyChange(key, "labour_quantity", e.target.value)
+                          }
+                        />
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">
-                        {quantity > 0
-                          ? `${quantity} × ${party.rate} = ${formatAmount(penalty_amount)}`
+                        {charged
+                          ? getPenaltyBreakdown({
+                              quantity,
+                              labour_quantity,
+                              rate: party.rate,
+                              penalty_amount,
+                            })
                           : "--"}
                       </td>
                       <td className="px-3 py-2">
@@ -130,7 +169,7 @@ const BPairPenaltySection = ({
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap font-semibold text-gray-900 dark:text-white">
-                        {quantity > 0 ? formatAmount(total_penalty) : "--"}
+                        {charged ? formatAmount(total_penalty) : "--"}
                       </td>
                     </tr>
                   );

@@ -56,6 +56,7 @@ export const GetAllStitching = createAsyncThunk(
            design_no: filters.Design_No,
            partyName: filters.partyName,
            project_status: filters.project_status,
+           packing_status: filters.packing_status,
            page: data.page,
            limit: data.limit,
          });
