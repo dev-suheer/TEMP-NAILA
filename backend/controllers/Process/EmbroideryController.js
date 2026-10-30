@@ -10,6 +10,7 @@ import { StitchingModel } from "../../models/Process/StitchingModel.js";
 import { StoneModel } from "../../models/Process/StoneModel.js";
 import { buildDateRangeQuery, getPaginationParams } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   buildProcessAvailability,
   getActiveNextSteps,
   getOrdersPackingProgress,
@@ -366,10 +367,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (s) =>  s._id.toString() === id
         );
         if (shirtItem) {
-          if (Number(received || 0) > Number(shirtItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          shirtItem.received = received;
+          assertReceivedQuantity(received, shirtItem.quantity_in_no);
+          shirtItem.received = Number(received || 0);
         }
       });
     }
@@ -380,10 +379,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (d) => d._id.toString() === id
         );
         if (dupattaItem) {
-          if (Number(received || 0) > Number(dupattaItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          dupattaItem.received = received;
+          assertReceivedQuantity(received, dupattaItem.quantity_in_no);
+          dupattaItem.received = Number(received || 0);
         }
       });
     }
@@ -394,10 +391,8 @@ export const updateEmbroidery = async (req, res, next) => {
           (t) => t._id.toString() === id
         );
         if (trouserItem) {
-          if (Number(received || 0) > Number(trouserItem.quantity_in_no || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-          trouserItem.received = received;
+          assertReceivedQuantity(received, trouserItem.quantity_in_no);
+          trouserItem.received = Number(received || 0);
         }
       });
     }
@@ -405,7 +400,7 @@ export const updateEmbroidery = async (req, res, next) => {
       const checkInvalidValue = (value) => {
         return isNaN(value) || value === undefined || value === null
           ? 0
-          : value;
+          : Number(value);
       };
       const calculateTotalRecieved = () => {
         let totalRecieved = 0;

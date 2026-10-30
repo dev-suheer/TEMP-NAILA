@@ -5,6 +5,7 @@ import { processBillsModel } from "../../models/Process/ProcessBillsModel.js";
 import { CuttingModel } from "../../models/Process/CuttingModel.js";
 import { getPaginationParams } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   assertSourceCanCreateNextStep,
   assertSourceHasNoNextSteps,
   buildProcessAvailability,
@@ -193,7 +194,7 @@ export const getStoneByEmbroideryId = async (req, res, next) => {
 
 export const updateStone = async (req, res, next) => {
   try {
-    const { id, category_quantity, project_status, totalQuantity } = req.body;
+    const { id, category_quantity, project_status } = req.body;
     if (!id) throw new Error("Id not Found");
     const stone = await StoneModel.findById(id);
     if (!stone) throw new Error("Stone not Found");
@@ -201,49 +202,20 @@ export const updateStone = async (req, res, next) => {
       stone.project_status = project_status;
     }
     if (category_quantity && category_quantity.length > 0) {
-      category_quantity.forEach((item) => {
-        const { first, second, third, id } = item;
-        const date = new Date().toLocaleString("en-PK");
-        let toUpdate = stone.category_quantity.find((obj) => obj._id == id);
-        let new_r_quantity = stone.r_quantity - toUpdate.recieved_Data.r_total;
-        if (toUpdate) {
-          if (first !== undefined && first !== null) {
-            let total =
-              toUpdate.recieved_Data.r_total -
-              toUpdate.recieved_Data.first.quantity;
-            toUpdate.recieved_Data.first.quantity = first;
-            toUpdate.recieved_Data.first.date = date;
-            toUpdate.recieved_Data.r_total = first + total;
-          }
+      stone.category_quantity.forEach((row) => {
+        const incoming = category_quantity.find(
+          (item) => String(item.id) === String(row._id)
+        );
+        if (incoming?.received === undefined) return;
 
-          if (second !== undefined && second !== null) {
-            let total =
-              toUpdate.recieved_Data.r_total -
-              toUpdate.recieved_Data.second.quantity;
-            toUpdate.recieved_Data.second.quantity = second;
-            toUpdate.recieved_Data.second.date = date;
-            toUpdate.recieved_Data.r_total = second + total;
-          }
-
-          if (third !== undefined && third !== null) {
-            let total =
-              toUpdate.recieved_Data.r_total -
-              toUpdate.recieved_Data.third.quantity;
-            toUpdate.recieved_Data.third.quantity = third;
-            toUpdate.recieved_Data.third.date = date;
-            toUpdate.recieved_Data.r_total = third + total;
-          }
-          if (toUpdate.recieved_Data.r_total > Number(toUpdate.quantity || 0)) {
-            throw new Error("Received quantity cannot be greater than sent quantity");
-          }
-        }
-        stone.r_quantity = new_r_quantity + toUpdate.recieved_Data.r_total;
-        if (stone.r_quantity > totalQuantity) {
-          throw new Error("Invalid Update Quantity Value");
-        }
-        toUpdate.recieved_Data.r_date = date;
-        stone.updated = true;
+        assertReceivedQuantity(incoming.received, row.quantity);
+        row.recieved_Data.r_total = Number(incoming.received || 0);
       });
+      stone.r_quantity = stone.category_quantity.reduce(
+        (total, row) => total + Number(row.recieved_Data.r_total || 0),
+        0
+      );
+      stone.updated = true;
     }
 
     await stone.save();

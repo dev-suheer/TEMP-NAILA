@@ -162,3 +162,18 @@ export const getColorLimitError = (availability, rows, quantityKey) => {
   }
   return "";
 };
+
+export const getReceivedError = (value, sent) => {
+  if (!/^\d*$/.test(value)) return "Received quantity must be a whole number, 0 or more";
+  if (Number(value || 0) > Number(sent || 0)) {
+    return "Received quantity cannot be greater than sent quantity";
+  }
+  return "";
+};
+
+export const blurOnWheel = (e) => e.target.blur();
+
+export const getInitialReceived = (record, saved, sent) => {
+  const isUnsaved = !record?.updated && record?.project_status !== "Completed";
+  return saved || (isUnsaved ? sent : 0);
+};

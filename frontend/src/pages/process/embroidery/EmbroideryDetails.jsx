@@ -17,7 +17,13 @@ import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import PictureOrderModal from "../../../Component/Embodiary/PictureOrderModal";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
 import toast from "react-hot-toast";
-import { formatReadableDate, getTodayDate } from "../../../Utils/Common";
+import {
+  blurOnWheel,
+  formatReadableDate,
+  getInitialReceived,
+  getReceivedError,
+  getTodayDate,
+} from "../../../Utils/Common";
 import { Button } from "../../../Component/Common/button/Button";
 import PicturesOrderWarningModal from "./PicturesOrderWarningModal";
 import StatusChip from "../../../Component/Common/StatusChip";
@@ -96,7 +102,7 @@ const EmbroideryDetails = () => {
         rows?.length
           ? rows.map((item) => ({
               ...item,
-              received: item.received || item.quantity_in_no || 0,
+              received: getInitialReceived(SingleEmbroidery, item.received, item.quantity_in_no) || 0,
             }))
           : null;
 
@@ -112,17 +118,13 @@ const EmbroideryDetails = () => {
   }, [SingleEmbroidery, id]);
 
   const handleInputChange = (category, color, received, index, section) => {
-    const validReceived = isNaN(received) || received === "" ? 0 : received;
-    const sentQuantity = Number(formData?.[section]?.[index]?.quantity_in_no || 0);
-
-    if (Number(validReceived) > sentQuantity) {
-      return toast.error("Received quantity cannot be greater than sent quantity");
-    }
+    const error = getReceivedError(received, formData?.[section]?.[index]?.quantity_in_no);
+    if (error) return toast.error(error);
 
     setFormData((prevState) => {
       const updatedSection = prevState[section].map((item, idx) =>
         idx === index
-          ? { ...item, category, color, received: validReceived }
+          ? { ...item, category, color, received }
           : item
       );
 
@@ -650,7 +652,7 @@ const EmbroideryDetails = () => {
                       </p>
 
                       <input
-                        type="text"
+                        type="number"
                         key={`shirt-${index}`}
                         className="py-1  border-gray-300 w-[4.5rem] px-1 rounded-sm text-black dark:text-black"
                         value={item.received} // Ensure this is tied to the state
@@ -658,11 +660,12 @@ const EmbroideryDetails = () => {
                           handleInputChange(
                             item.category,
                             item.color,
-                            parseInt(e.target.value),
+                            e.target.value,
                             index,
                             "shirt"
                           )
                         }
+                        onWheel={blurOnWheel}
                         readOnly={project_status === "Completed"}
                       />
                     </div>
@@ -687,7 +690,7 @@ const EmbroideryDetails = () => {
                         ({item?.quantity_in_m}m)
                       </p>
                       <input
-                        type="text"
+                        type="number"
                         key={`duppata-${index}`}
                         className="py-1 border-gray-300 w-[4.5rem] px-1 rounded-sm text-black dark:text-black"
                         value={item.received}
@@ -695,11 +698,12 @@ const EmbroideryDetails = () => {
                           handleInputChange(
                             item.category,
                             item.color,
-                            parseInt(e.target.value),
+                            e.target.value,
                             index,
                             "duppata"
                           )
                         }
+                        onWheel={blurOnWheel}
                         readOnly={project_status === "Completed"}
                       />
                     </div>
@@ -725,18 +729,19 @@ const EmbroideryDetails = () => {
                       </p>
                       <input
                         key={`trouser-${index}`}
-                        type="text"
+                        type="number"
                         className="py-1 border-gray-300 w-[4.5rem] px-1 rounded-sm text-black dark:text-black"
                         value={item.received}
                         onChange={(e) =>
                           handleInputChange(
                             item.category,
                             item.color,
-                            parseInt(e.target.value),
+                            e.target.value,
                             index,
                             "trouser"
                           )
                         }
+                        onWheel={blurOnWheel}
                         readOnly={project_status === "Completed"}
                       />
                     </div>
@@ -954,17 +959,6 @@ const EmbroideryDetails = () => {
                             inputBorderColor="#D1D5DB"
                             inputBackgroundColor="#F9FAFB"
                           />
-                          <style jsx>
-                            {`
-                              .react-search-box-dropdown {
-                                position: absolute;
-                                z-index: 50;
-                                top: 100%;
-                                left: 0;
-                                width: 100%;
-                              }
-                            `}
-                          </style>
                         </div>
                       )}
                     </div>

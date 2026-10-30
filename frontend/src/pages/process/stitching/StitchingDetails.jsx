@@ -11,7 +11,13 @@ import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
 
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
-import { formatReadableDate, getRecordForId } from "../../../Utils/Common";
+import {
+  blurOnWheel,
+  formatReadableDate,
+  getInitialReceived,
+  getReceivedError,
+  getRecordForId,
+} from "../../../Utils/Common";
 import toast from "react-hot-toast";
 import StatusChip from "../../../Component/Common/StatusChip";
 import PageLoader from "../../../Component/Loader/PageLoader";
@@ -55,7 +61,7 @@ const StitchingDetails = () => {
         suits_category:
           SingleStitching.suits_category?.map((item) => ({
             id: item.id,
-            return_quantity: item.recieved || item.quantity_in_no,
+            return_quantity: getInitialReceived(SingleStitching, item.recieved, item.quantity_in_no),
             quantity_in_no: item.quantity_in_no,
             cost_price: item.cost_price,
             sale_price: item.sale_price,
@@ -71,10 +77,8 @@ const StitchingDetails = () => {
 
   const handleInputChange = (category, index, field, value) => {
     if (field === "return_quantity") {
-      const sentQuantity = Number(formData?.[category]?.[index]?.quantity_in_no || 0);
-      if (Number(value || 0) > sentQuantity) {
-        return toast.error("Received quantity cannot be greater than sent quantity");
-      }
+      const error = getReceivedError(value, formData?.[category]?.[index]?.quantity_in_no);
+      if (error) return toast.error(error);
     }
 
     setFormData((prevState) => ({
@@ -280,11 +284,11 @@ const StitchingDetails = () => {
                         </p>
                         {/* RETURN QUANTITY */}
                         <input
-                          type="text"
+                          type="number"
                           placeholder="R.Q"
                           className="bg-[#EEEEEE] py-1 border-gray-300 w-[4.5rem] px-1 rounded-sm text-gray-900 dark:text-gray-900"
                           value={
-                            formData?.suits_category[index]?.return_quantity ||
+                            formData?.suits_category[index]?.return_quantity ??
                             ""
                           }
                           onChange={(e) =>
@@ -295,6 +299,7 @@ const StitchingDetails = () => {
                               e.target.value
                             )
                           }
+                          onWheel={blurOnWheel}
                         />
                       </div>
                     ))}

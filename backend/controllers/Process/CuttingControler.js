@@ -4,6 +4,7 @@ import { processBillsModel } from "../../models/Process/ProcessBillsModel.js";
 import { setMongoose } from "../../utils/Mongoose.js";
 import { getPaginationParams } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   assertSourceCanCreateNextStep,
   assertSourceHasNoNextSteps,
   buildProcessAvailability,
@@ -125,12 +126,8 @@ export const updateCutting = async (req, res, next) => {
         );
         if (!incoming) return row;
 
-        const received = Number(incoming.received || 0);
-        if (received > Number(row.quantity || 0)) {
-          throw new Error("Received quantity cannot be greater than sent quantity");
-        }
-
-        row.received = received;
+        assertReceivedQuantity(incoming.received, row.quantity);
+        row.received = Number(incoming.received || 0);
         return row;
       });
       const updatedReceivedQuantity = updatedRows.reduce(
@@ -147,9 +144,7 @@ export const updateCutting = async (req, res, next) => {
         updated: true,
       };
     } else if (r_quantity !== undefined && r_quantity !== null && r_quantity !== "") {
-      if (Number(r_quantity) > Number(cutting.T_Quantity || 0)) {
-        throw new Error("Invalid Recieved quantity");
-      }
+      assertReceivedQuantity(r_quantity, cutting.T_Quantity);
       updateQuery = {
         ...updateQuery,
         r_quantity,

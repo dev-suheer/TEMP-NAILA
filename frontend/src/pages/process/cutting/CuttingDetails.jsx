@@ -20,10 +20,13 @@ import ReactSearchBox from "react-search-box";
 import toast from "react-hot-toast";
 import ProcessAvailabilityCard from "../../../Component/Common/ProcessAvailabilityCard";
 import {
+  blurOnWheel,
   formatReadableDate,
   getAvailableColors,
   getColorLimitError,
   getColorOptionLabel,
+  getInitialReceived,
+  getReceivedError,
   getRecordForId,
   getTodayDate,
 } from "../../../Utils/Common";
@@ -156,6 +159,12 @@ const CuttingDetails = () => {
   }, [SingleCutting, SingleEmbroidery, partyValue, id, source_step, source_id, embroidery_Id]);
 
   useEffect(() => {
+    const colorsAddUp =
+      (SingleCutting?.category_quantity || []).reduce(
+        (total, item) => total + Number(item.received || 0),
+        0
+      ) === Number(SingleCutting?.r_quantity || 0);
+
     setcuttingData({
       id: id,
       r_quantity: SingleCutting?.r_quantity || "",
@@ -165,7 +174,9 @@ const CuttingDetails = () => {
           category: item.category,
           color: item.color,
           quantity: item.quantity,
-          received: item.received || item.quantity || "",
+          received: colorsAddUp
+            ? getInitialReceived(SingleCutting, item.received, item.quantity)
+            : item.received || item.quantity || "",
         })) || [],
     });
   }, [SingleCutting]);
@@ -244,12 +255,8 @@ const CuttingDetails = () => {
 
   const handleCuttingReceivedChange = (e, index) => {
     const { value } = e.target;
-    const received = Number(value || 0);
-    const sentQuantity = Number(cuttingData.category_quantity?.[index]?.quantity || 0);
-
-    if (received > sentQuantity) {
-      return toast.error("Received quantity cannot be greater than sent quantity");
-    }
+    const error = getReceivedError(value, cuttingData.category_quantity?.[index]?.quantity);
+    if (error) return toast.error(error);
 
     setcuttingData((prevData) => ({
       ...prevData,
@@ -626,6 +633,7 @@ const CuttingDetails = () => {
                     required
                     value={row.received}
                     onChange={(e) => handleCuttingReceivedChange(e, index)}
+                    onWheel={blurOnWheel}
                     disabled={SingleCutting?.project_status === "Completed"}
                   />
                 </div>
@@ -845,17 +853,6 @@ const CuttingDetails = () => {
                             inputBorderColor="#D1D5DB"
                             inputBackgroundColor="#F9FAFB"
                           />
-                          <style jsx>
-                            {`
-                              .react-search-box-dropdown {
-                                position: absolute;
-                                z-index: 50;
-                                top: 100%;
-                                left: 0;
-                                width: 100%;
-                              }
-                            `}
-                          </style>
                         </div>
                       )}
                     </div>

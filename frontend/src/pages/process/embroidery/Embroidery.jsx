@@ -650,17 +650,6 @@ const Embroidery = () => {
                               inputBorderColor="#D1D5DB"
                               inputBackgroundColor="#F9FAFB"
                             />
-                            <style jsx>
-                              {`
-                                .react-search-box-dropdown {
-                                  position: absolute;
-                                  z-index: 50;
-                                  top: 100%;
-                                  left: 0;
-                                  width: 100%;
-                                }
-                              `}
-                            </style>
                           </div>
                         )}
                       </div>

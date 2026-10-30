@@ -21,10 +21,12 @@ import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
 import moment from "moment-timezone";
 import ReactSearchBox from "react-search-box";
 import {
-  formatReadableDate,
+  blurOnWheel,
   getAvailableColors,
   getColorLimitError,
   getColorOptionLabel,
+  getInitialReceived,
+  getReceivedError,
   getRecordForId,
 } from "../../../Utils/Common";
 import ProcessAvailabilityCard from "../../../Component/Common/ProcessAvailabilityCard";
@@ -133,10 +135,7 @@ const StonesDetails = () => {
       SingleStone?.category_quantity
         ?.filter((item) => item?.color)
         ?.map((item) => {
-          const receivedQuantity =
-            Number(item.recieved_Data?.first?.quantity || 0) +
-            Number(item.recieved_Data?.second?.quantity || 0) +
-            Number(item.recieved_Data?.third?.quantity || 0);
+          const receivedQuantity = Number(item.recieved_Data?.r_total || 0);
           const matchingShirt = SingleEmbroidery?.shirt?.find(
             (shirt) => shirt?.color === item.color
           );
@@ -177,14 +176,7 @@ const StonesDetails = () => {
 
   const [StoneData, setStoneData] = useState({
     id: SingleStone?.id,
-    category_quantity: SingleStone?.category_quantity || [
-      {
-        id: "",
-        first: 0,
-        second: 0,
-        third: 0,
-      },
-    ],
+    category_quantity: [],
   });
 
   useEffect(() => {
@@ -193,11 +185,10 @@ const StonesDetails = () => {
         id: SingleStone.id,
         category_quantity: SingleStone?.category_quantity?.map((item) => ({
           id: item.id,
-          first: item.recieved_Data?.first?.quantity || 0,
-          second: item.recieved_Data?.second?.quantity || 0,
-          third: item.recieved_Data?.third?.quantity || 0,
           category: item.category,
           color: item.color,
+          quantity: item.quantity,
+          received: getInitialReceived(SingleStone, item.recieved_Data?.r_total, item.quantity),
         })),
       });
     }
@@ -420,23 +411,7 @@ const StonesDetails = () => {
   const handleUpdateStone = (e) => {
     e.preventDefault();
 
-    const updatedCategoryQuantity = SingleStone?.category_quantity?.map(
-      (item, index) => ({
-        ...StoneData?.category_quantity[index],
-        id: item.id,
-      })
-    );
-
-    const updatedStoneData = {
-      ...StoneData,
-      category_quantity: updatedCategoryQuantity,
-      totalQuantity: SingleStone?.category_quantity?.reduce(
-        (total, item) => total + item.quantity,
-        0
-      ),
-    };
-
-    dispatch(UpdateStoneAsync(updatedStoneData))
+    dispatch(UpdateStoneAsync(StoneData))
       .then((res) => {
         if (res.payload.success) {
           const data = {
@@ -472,35 +447,17 @@ const StonesDetails = () => {
     });
   };
 
-  const handlstoneChange = (index, field, value) => {
-    const nextValue = Number(value || 0);
-    const currentRow = StoneData?.category_quantity?.[index] || {};
-    const sentQuantity = Number(SingleStone?.category_quantity?.[index]?.quantity || 0);
-    const nextRowTotal =
-      Number(field === "first" ? nextValue : currentRow.first || 0) +
-      Number(field === "second" ? nextValue : currentRow.second || 0) +
-      Number(field === "third" ? nextValue : currentRow.third || 0);
+  const handleStoneReceivedChange = (e, index) => {
+    const { value } = e.target;
+    const error = getReceivedError(value, StoneData.category_quantity?.[index]?.quantity);
+    if (error) return toast.error(error);
 
-    if (nextRowTotal > sentQuantity) {
-      return toast.error("Received quantity cannot be greater than sent quantity");
-    }
-
-    const updatedCategoryQuantity = StoneData?.category_quantity?.map(
-      (item, i) => {
-        if (i === index) {
-          return {
-            ...item,
-            [field]: nextValue,
-          };
-        }
-        return item;
-      }
-    );
-
-    setStoneData({
-      ...StoneData,
-      category_quantity: updatedCategoryQuantity,
-    });
+    setStoneData((prevData) => ({
+      ...prevData,
+      category_quantity: prevData.category_quantity?.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, received: value } : row
+      ),
+    }));
   };
 
   const openModal = () => {
@@ -725,78 +682,44 @@ const StonesDetails = () => {
 
         {/* RECEIVED SUITS COLORS */}
         <div className="my-10 px-3 text-gray-800 dark:text-gray-200">
-          <h2 className="text-lg font-semibold">Received Suits Colors</h2>
-
-          <div className="flex justify-between items-start flex-wrap gap-x-20">
-            {/* DETAILS */}
-            <div className="details">
-              {StoneData?.category_quantity?.map((item, index) => {
-                const sum = item.first + item.second + item.third;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="line my-3 flex justify-between items-center gap-x-6 "
-                  >
-                    <span className="w-[7rem] font-bold text-sm">
-                      {item.category}
-                    </span>
-                    <span className="w-[7rem] text-sm">({item.color})</span>
-                    <input
-                      type="number"
-                      className="bg-[#EEEEEE] py-1 border-gray-300 w-[3rem] px-1 rounded-sm text-black  dark:text-gray-800"
-                      value={item.first}
-                      readOnly={SingleStone.project_status === "Completed"}
-                      onChange={(e) =>
-                        handlstoneChange(index, "first", e.target.value)
-                      }
-                    />
-                    <input
-                      type="number"
-                      className="bg-[#EEEEEE] py-1 border-gray-300 w-[3rem] px-1 rounded-sm text-black  dark:text-gray-800"
-                      value={item.second}
-                      onChange={(e) =>
-                        handlstoneChange(index, "second", e.target.value)
-                      }
-                      readOnly={SingleStone.project_status === "Completed"}
-                    />
-                    <input
-                      type="number"
-                      className="bg-[#EEEEEE] py-1 border-gray-300 w-[3rem] px-1 rounded-sm text-black  dark:text-gray-800"
-                      value={item.third}
-                      onChange={(e) =>
-                        handlstoneChange(index, "third", e.target.value)
-                      }
-                      readOnly={SingleStone.project_status === "Completed"}
-                    />
-                    <input
-                      type="text"
-                      className="bg-[#EEEEEE] py-1 border-gray-300 w-[4rem] px-1 rounded-sm text-black  dark:text-gray-800"
-                      value={isNaN(sum) ? 0 : sum}
-                      readOnly
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* RECENT DETAILS */}
-            <div className="recent_details">
-              {SingleStone?.category_quantity?.map((item, index) => (
-                <div
-                  key={index}
-                  className="line my-3 flex justify-between items-center gap-x-4"
-                >
-                  <span className="w-28 font-semibold">Recent Date</span>
-                  <input
-                    type="text"
-                    className="bg-[#EEEEEE] py-1 border-gray-300 px-3 rounded-sm text-black  dark:text-gray-800"
-                    readOnly
-                    value={formatReadableDate(item?.createdAt)}
-                  />
-                </div>
-              ))}
-            </div>
+          <h2 className="font-semibold">Enter Received Quantity</h2>
+          <div className="mt-3 space-y-3 max-w-4xl">
+            {StoneData.category_quantity?.map((row, index) => (
+              <div
+                key={row.id || index}
+                className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr] items-center gap-3"
+              >
+                <input
+                  type="text"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block w-full p-2.5 disabled:opacity-75 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  value={row.category}
+                  disabled
+                />
+                <input
+                  type="text"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block w-full p-2.5 disabled:opacity-75 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  value={row.color}
+                  disabled
+                />
+                <input
+                  type="text"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block w-full p-2.5 disabled:opacity-75 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  value={`Sent: ${row.quantity || 0}`}
+                  disabled
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max={row.quantity || 0}
+                  placeholder="Received"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-0 focus:border-gray-300 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  value={row.received}
+                  onChange={(e) => handleStoneReceivedChange(e, index)}
+                  onWheel={blurOnWheel}
+                  disabled={SingleStone?.project_status === "Completed"}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1004,17 +927,6 @@ const StonesDetails = () => {
                             inputBorderColor="#D1D5DB"
                             inputBackgroundColor="#F9FAFB"
                           />
-                          <style jsx>
-                            {`
-                              .react-search-box-dropdown {
-                                position: absolute;
-                                z-index: 50;
-                                top: 100%;
-                                left: 0;
-                                width: 100%;
-                              }
-                            `}
-                          </style>
                         </div>
                       )}
                     </div>

@@ -25,6 +25,7 @@ import {
   getAvailableColors,
   getColorLimitError,
   getColorOptionLabel,
+  getInitialReceived,
   getRecordForId,
 } from "../../../Utils/Common";
 import StatusChip from "../../../Component/Common/StatusChip";
@@ -198,7 +199,8 @@ const CalendarDetails = () => {
   useEffect(() => {
     setCalenderData({
       id: id,
-      r_quantity: SingleCalender?.r_quantity || SingleCalender?.T_Quantity || "",
+      r_quantity:
+        getInitialReceived(SingleCalender, SingleCalender?.r_quantity, SingleCalender?.T_Quantity) ?? "",
     });
     setConvertedQuantity(SingleCalender?.r_quantity);
     setConvertedAmount(SingleCalender?.r_quantity * SingleCalender?.rate);
@@ -324,7 +326,7 @@ const CalendarDetails = () => {
   const handleUpdateCalender = (e) => {
     e.preventDefault();
 
-    if(!CalenderData.r_quantity || Number(CalenderData.r_quantity) < 0) {
+    if(CalenderData.r_quantity === "" || !(Number(CalenderData.r_quantity) >= 0)) {
       toast.error("Please enter a valid recieved quantity");
       return
     }
@@ -811,17 +813,6 @@ const CalendarDetails = () => {
                             inputBorderColor="#D1D5DB"
                             inputBackgroundColor="#F9FAFB"
                           />
-                          <style jsx>
-                            {`
-                              .react-search-box-dropdown {
-                                position: absolute;
-                                z-index: 50;
-                                top: 100%;
-                                left: 0;
-                                width: 100%;
-                              }
-                            `}
-                          </style>
                         </div>
                       )}
                     </div>

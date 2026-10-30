@@ -15,6 +15,7 @@ import {
   toStitchType,
 } from "../../utils/Common.js";
 import {
+  assertReceivedQuantity,
   assertSourceCanCreateNextStep,
   buildProcessAvailability,
   isStitchingPacked,
@@ -256,9 +257,7 @@ export const updateStitching = async (req, res, next) => {
               if (!toUpdate) {
                 throw new Error("Stitching row not found");
               }
-              if (Number(return_quantity || 0) > Number(toUpdate.quantity_in_no || 0)) {
-                throw new Error("Received quantity cannot be greater than sent quantity");
-              }
+              assertReceivedQuantity(return_quantity, toUpdate.quantity_in_no);
               if (Number(return_quantity || 0) < Number(toUpdate.packed_quantity || 0)) {
                 throw new Error(
                   `Received quantity of ${toUpdate.color} cannot be less than its packed quantity ${toUpdate.packed_quantity}`

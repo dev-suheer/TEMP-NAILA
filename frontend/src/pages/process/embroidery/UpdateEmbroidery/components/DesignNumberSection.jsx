@@ -261,19 +261,6 @@ const DesignNumberSection = ({ embroideryData,getData }) => {
               inputBackgroundColor="#F9FAFB"
              
             />
-            <style jsx>
-              {`
-                .react-search-box-dropdown {
-                  position: absolute;
-                  z-index: 50;
-                  top: 100%;
-                  left: 0;
-                  width: 100%;
-                  max-height: 250px;
-                  overflow-y: auto;
-                }
-              `}
-            </style>
           </div>
         )}
       </div>

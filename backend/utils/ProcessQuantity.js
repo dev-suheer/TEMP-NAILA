@@ -20,6 +20,17 @@ export const toProcessNumber = (value) => {
   return Number.isFinite(number) ? number : 0;
 };
 
+//RECEIVED IS COUNTED IN SUITS: A WHOLE NUMBER FROM 0 UP TO WHAT WAS SENT. A BLANK COUNTS AS 0
+export const assertReceivedQuantity = (received, sent) => {
+  const quantity = Number(received || 0);
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    throw new Error("Received quantity must be a whole number, 0 or more");
+  }
+  if (quantity > Number(sent || 0)) {
+    throw new Error("Received quantity cannot be greater than sent quantity");
+  }
+};
+
 export const sumStoneQuantity = (items) =>
   (items || []).reduce((total, item) => total + toProcessNumber(item?.quantity), 0);
 

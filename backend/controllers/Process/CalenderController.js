@@ -85,7 +85,7 @@ export const updateCalender = async (req, res, next) => {
     if (!calender) throw new Error("Calender not Found");
     let updateQuery = {};
     if (r_quantity !== undefined && r_quantity !== null && r_quantity !== "") {
-      if (Number(r_quantity) > Number(calender.T_Quantity || 0)) {
+      if (Number(r_quantity) < 0 || Number(r_quantity) > Number(calender.T_Quantity || 0)) {
         throw new Error("Invalid Recieved quantity");
       }
       updateQuery = { ...updateQuery, r_quantity, updated: true };
