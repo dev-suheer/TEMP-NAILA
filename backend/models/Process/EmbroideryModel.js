@@ -173,6 +173,10 @@ const embroiderySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    bill_generated_at: {
+      type: Date,
+      default: null,
+    },
     updated: {
       type: Boolean,
       default: false,

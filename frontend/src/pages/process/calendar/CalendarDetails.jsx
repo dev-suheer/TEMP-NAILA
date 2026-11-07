@@ -13,6 +13,7 @@ import {
   getCuttingDataBypartyNameAsync,
 } from "../../../features/CuttingSlice";
 import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
+import { getLastAdditionalExpenditureAsync } from "../../../features/ProcessBillSlice";
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import ReactSearchBox from "react-search-box";
 import moment from "moment-timezone";
@@ -428,12 +429,18 @@ const CalendarDetails = () => {
     });
   };
 
+  //THE FORM STARTS WITH THE LAST BILLED ADDITIONAL COST FOR THIS DESIGN
   const openGenerateBillForm = () => {
-    setBilldata((prev) => ({
-      ...prev,
-      Manual_No: SingleCalender?.Manual_No                                                                                        
-    }))
-    setProcessBillModal(true);
+    dispatch(
+      getLastAdditionalExpenditureAsync({ process_Category: "Calender", design_no: SingleCalender?.design_no })
+    ).then(({ payload }) => {
+      setBilldata((prev) => ({
+        ...prev,
+        Manual_No: SingleCalender?.Manual_No,
+        additionalExpenditure: payload ?? "",
+      }));
+      setProcessBillModal(true);
+    });
   };
 
   const closeBillModal = () => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import ButtonSpinner from "../Common/button/ButtonSpinner";
 
 const ProcessBillModal = ({
@@ -8,10 +8,11 @@ const ProcessBillModal = ({
   processBillAmount,
   onDataChange,
   Manual_No,
+  additionalExpenditure,
 }) => {
   // State variables to hold form data
   const [formData, setFormData] = useState({
-    additionalExpenditure: "",
+    additionalExpenditure: additionalExpenditure ?? "",
     Manual_No: Manual_No,
   });
 

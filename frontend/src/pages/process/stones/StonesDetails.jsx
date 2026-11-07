@@ -15,6 +15,7 @@ import {
 
 import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
 import { GetAllLaceForEmroidery } from "../../../features/InStockSlice";
+import { getLastAdditionalExpenditureAsync } from "../../../features/ProcessBillSlice";
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import toast from "react-hot-toast";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
@@ -552,7 +553,12 @@ const StonesDetails = () => {
   };
 
   const openGenerateBillForm = () => {
-    setProcessBillModal(true);
+    dispatch(
+      getLastAdditionalExpenditureAsync({ process_Category: "Stone", design_no: SingleStone?.design_no })
+    ).then(({ payload }) => {
+      setProcessBillData({ Manual_No: SingleStone?.Manual_No, additionalExpenditure: payload ?? "" });
+      setProcessBillModal(true);
+    });
   };
 
   const closeBillModal = () => {
@@ -1200,6 +1206,7 @@ const StonesDetails = () => {
           loading={StnoneBillLoading}
           closeModal={closeBillModal}
           Manual_No={SingleStone?.Manual_No}
+          additionalExpenditure={processBillData.additionalExpenditure}
           processBillAmount={Math.round(
             SingleStone?.rate * SingleStone?.r_quantity,
           )}

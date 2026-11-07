@@ -8,6 +8,7 @@ import {
   UpdateStitchingAsync,
 } from "../../../features/stitching";
 import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
+import { getLastAdditionalExpenditureAsync } from "../../../features/ProcessBillSlice";
 
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
@@ -170,8 +171,14 @@ const StitchingDetails = () => {
     });
   };
 
+  //THE FORM STARTS WITH THE LAST BILLED ADDITIONAL COST FOR THIS DESIGN, KEPT HERE TOO SO IT IS SENT EVEN IF NOT TYPED OVER
   const openGenerateBillForm = () => {
-    setProcessBillModal(true);
+    dispatch(
+      getLastAdditionalExpenditureAsync({ process_Category: "Stitching", design_no: SingleStitching?.design_no })
+    ).then(({ payload }) => {
+      setProcessBillData({ Manual_No: SingleStitching?.Manual_No, additionalExpenditure: payload ?? "" });
+      setProcessBillModal(true);
+    });
   };
 
   const closeBillModal = () => {
@@ -418,6 +425,7 @@ const StitchingDetails = () => {
           loading={StitchingBillLoading}
           closeModal={closeBillModal}
           Manual_No={SingleStitching?.Manual_No}
+          additionalExpenditure={processBillData.additionalExpenditure}
           processBillAmount={Math.round(
             SingleStitching?.rate * SingleStitching?.r_quantity
           )}

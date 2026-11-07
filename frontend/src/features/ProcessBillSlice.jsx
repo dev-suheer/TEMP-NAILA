@@ -7,6 +7,7 @@ import { buildQueryParams } from "../Utils/Common";
 const generateProcessBill = "/api/processBillRouter/generateProcessBill";
 const getAllProcessBill = "/api/processBillRouter/getAllProcessBills";
 const getProcessBillById = "/api/processBillRouter/getProcessillById";
+const getLastAdditionalExpenditureURL = "/api/processBillRouter/getLastAdditionalExpenditure";
 const getAllPictureAccountsURL = "/api/process/pictures/getAllPictureAccounts";
 const getPicruresBillByIdURL = "/api/process/pictures/getPicruresBillById";
 const deletePictureOrderByIdURL = "/api/process/pictures/deletePictureOrderById";
@@ -64,6 +65,18 @@ export const GetProcessBillByIdAsync = createAsyncThunk(
       return response.data;
     } catch (error) {
       throw new Error(error.response.data.error);
+    }
+  }
+);
+
+export const getLastAdditionalExpenditureAsync = createAsyncThunk(
+  "getLastAdditionalExpenditure/processBills",
+  async (data) => {
+    try {
+      const response = await axios.post(getLastAdditionalExpenditureURL, data);
+      return response.data.additionalExpenditure ?? null;
+    } catch {
+      return null;
     }
   }
 );

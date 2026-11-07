@@ -8,6 +8,7 @@ import {
   generateGatePassPdfFunction,
   generateProcessBill,
   getAllProcessBills,
+  getLastAdditionalExpenditure,
   getProcessillById,
   markAsPaid,
   temporaryAcoountUpdate,
@@ -24,6 +25,11 @@ processBillRouter.post(
   "/getProcessillById",
   superAdminAndAdminOnly,
   getProcessillById
+);
+processBillRouter.post(
+  "/getLastAdditionalExpenditure",
+  superAdminAndAdminOnly,
+  getLastAdditionalExpenditure
 );
 processBillRouter.post(
     "/getAllProcessBills",
