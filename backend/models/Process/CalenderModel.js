@@ -61,6 +61,8 @@ const calenderSchema = new mongoose.Schema({
 
 calenderSchema.index({ project_status: 1, createdAt: -1 });
 calenderSchema.index({ partyName: 1, createdAt: -1 });
+calenderSchema.index({ project_status: -1, createdAt: -1 });
+calenderSchema.index({ partyName: 1, project_status: -1, createdAt: -1 });
 calenderSchema.index({ date: -1 });
 calenderSchema.index({ embroidery_Id: 1 });
 calenderSchema.index({ design_no: 1, createdAt: -1 });

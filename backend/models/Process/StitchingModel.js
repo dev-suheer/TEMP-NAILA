@@ -145,7 +145,6 @@ const stitchingSchema = new mongoose.Schema(
       enum: Object.values(PackingStatus),
       default: PackingStatus.NOT_PACKED,
     },
-    //PACKED IN ONE GO BEFORE ROUNDS WERE TRACKED, SO IT HAS NO PACKING RECORD
     packed_before_tracking: {
       type: Boolean,
       default: false,
@@ -154,6 +153,10 @@ const stitchingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    list_rank: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -161,6 +164,10 @@ const stitchingSchema = new mongoose.Schema(
 stitchingSchema.index({ project_status: 1, createdAt: -1 });
 stitchingSchema.index({ packing_status: 1, createdAt: -1 });
 stitchingSchema.index({ partyName: 1, createdAt: -1 });
+stitchingSchema.index({ list_rank: -1, createdAt: -1 });
+stitchingSchema.index({ project_status: 1, list_rank: -1, createdAt: -1 });
+stitchingSchema.index({ packing_status: 1, list_rank: -1, createdAt: -1 });
+stitchingSchema.index({ partyName: 1, list_rank: -1, createdAt: -1 });
 stitchingSchema.index({ date: -1 });
 stitchingSchema.index({ embroidery_Id: 1 });
 stitchingSchema.index({ design_no: 1, createdAt: -1 });

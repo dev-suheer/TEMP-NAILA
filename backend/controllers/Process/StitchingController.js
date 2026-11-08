@@ -21,6 +21,8 @@ import {
   isStitchingPacked,
   ProcessStep,
   sumPackingQuantity,
+  syncListRanks,
+  syncListRanksSafely,
   syncPackingCounters,
 } from "../../utils/ProcessQuantity.js";
 import {
@@ -152,6 +154,7 @@ export const addStitching = async (req, res, next) => {
       //UPDATE MAIN EMBROIDERY NextStep
       mainEmbroidery.next_steps.stitching = true;
       await mainEmbroidery.save({ session });
+      await syncListRanks({ embroidery_Id, session });
     });
 
     return res
@@ -183,7 +186,7 @@ export const getAllStitching = async (req, res, next) => {
     const data = await StitchingModel.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ list_rank: -1, createdAt: -1 });
     const total = await StitchingModel.countDocuments(query);
     const response = {
       totalPages: Math.ceil(total / limit),
@@ -292,6 +295,7 @@ export const updateStitching = async (req, res, next) => {
           session,
         });
       }
+      await syncListRanks({ embroidery_Id: stitching.embroidery_Id, session });
       return res
         .status(200)
         .json({ success: true, message: "Updated Successfully" });
@@ -327,6 +331,7 @@ export const deleteStitching = async (req, res, next) => {
       embroidery_Id: data.embroidery_Id,
     }));
     await embData.save(); 
+    await syncListRanksSafely(data.embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Deleted Successfully" });
@@ -638,6 +643,7 @@ export const addInStockFromPackaging = async (req,res,next) => {
         { session }
       );
       await syncPackingCounters({ sourceStep, sourceId, embroidery_Id, session });
+      await syncListRanks({ embroidery_Id, session });
     });
     return res
     .status(200)

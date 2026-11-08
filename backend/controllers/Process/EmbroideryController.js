@@ -16,6 +16,8 @@ import {
   getOrdersPackingProgress,
   loadPackingInfoSafely,
   ProcessStep,
+  syncListRanks,
+  syncListRanksSafely,
 } from "../../utils/ProcessQuantity.js";
 
 
@@ -234,7 +236,7 @@ export const addEmbriodery = async (req, res, next) => {
         .session(session);
       const lastSerialNo = lastDocument ? lastDocument.serial_No : 0;
 
-      await EmbroideryModel.create(
+      const [createdEmbroidery] = await EmbroideryModel.create(
         [
           {
             partyName,
@@ -268,6 +270,7 @@ export const addEmbriodery = async (req, res, next) => {
         ],
         { session }
       );
+      await syncListRanks({ embroidery_Id: createdEmbroidery._id, session });
     });
 
     return res
@@ -297,7 +300,7 @@ export const getAllEmbroidery = async (req, res, next) => {
     const data = await EmbroideryModel.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ list_rank: -1, createdAt: -1 });
     const total = await EmbroideryModel.countDocuments(query);
     //WORKED OUT FOR THIS PAGE ONLY, IN A FIXED NUMBER OF QUERIES
     const packingProgress = await loadPackingInfoSafely(() => getOrdersPackingProgress(data), data);
@@ -432,6 +435,7 @@ export const updateEmbroidery = async (req, res, next) => {
     }
 
     await embroideryData.save();
+    await syncListRanksSafely(embroideryData._id);
     return res.status(200).json({
       success: true,
       message: "Updated Successfully",
@@ -872,6 +876,7 @@ export const replaceEmroideryData = async (req, res, next) => {
           },
         { new: true, session }
       );
+      await syncListRanks({ embroidery_Id: id, session });
 
     });
 
@@ -897,6 +902,7 @@ export const updateVerificationStatus = async (req,res, next) => {
       }
     ], {new:true});
     if(!update) throw new CustomError("Failed to update embroidery", 400);
+    await syncListRanksSafely(update._id);
     res.status(200).json({success: true, message: "Embroidery verification status updated successfully"})
   } catch (error) {
     next(error)

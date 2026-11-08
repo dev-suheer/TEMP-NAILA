@@ -11,6 +11,7 @@ import {
   getRecordsPackingLeft,
   loadPackingInfoSafely,
   ProcessStep,
+  syncListRanksSafely,
 } from "../../utils/ProcessQuantity.js";
 
 export const addCutting = async (req, res, next) => {
@@ -103,6 +104,7 @@ export const addCutting = async (req, res, next) => {
     //UPDATE MAIN EMBROIDERY NextStep
     mainEmbroidery.next_steps.cutting = true;
     await mainEmbroidery.save();
+    await syncListRanksSafely(embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Added Successfully" });
@@ -157,6 +159,7 @@ export const updateCutting = async (req, res, next) => {
     await CuttingModel.findByIdAndUpdate(id, updateQuery, {
       new: true,
     });
+    await syncListRanksSafely(cutting.embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Updated Successfully" });
@@ -182,7 +185,7 @@ export const getAllCutting = async (req, res, next) => {
     const data = await CuttingModel.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ list_rank: -1, createdAt: -1 });
     const total = await CuttingModel.countDocuments(query);
     //WHAT IS LEFT AT EACH PACKED CUTTING, FOR ITS PACKING ICON. WORKED OUT FOR THIS PAGE ONLY
     const packingLeft = await loadPackingInfoSafely(
@@ -258,6 +261,7 @@ export const deleteCutting = async (req, res, next) => {
       embroidery_Id: data.embroidery_Id,
     }));
     await embData.save();
+    await syncListRanksSafely(data.embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Deleted Successfully" });

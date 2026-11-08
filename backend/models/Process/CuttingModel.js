@@ -87,7 +87,6 @@ const cuttingSchema = new mongoose.Schema({
         type: Boolean,
         default: false
       },
-      //SUITS PACKED DIRECTLY FROM THIS CUTTING, KEPT BY syncPackingCounters
       packed_quantity: {
         type: Number,
         default: 0,
@@ -96,11 +95,18 @@ const cuttingSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+      list_rank: {
+        type: Number,
+        default: null,
+      },
 
 }, { timestamps: true });
 
 cuttingSchema.index({ project_status: 1, createdAt: -1 });
 cuttingSchema.index({ partyName: 1, createdAt: -1 });
+cuttingSchema.index({ list_rank: -1, createdAt: -1 });
+cuttingSchema.index({ project_status: 1, list_rank: -1, createdAt: -1 });
+cuttingSchema.index({ partyName: 1, list_rank: -1, createdAt: -1 });
 cuttingSchema.index({ date: -1 });
 cuttingSchema.index({ embroidery_Id: 1 });
 cuttingSchema.index({ design_no: 1, createdAt: -1 });
