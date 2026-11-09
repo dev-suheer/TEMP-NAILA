@@ -12,6 +12,7 @@ import {
   buildProcessAvailability,
   getOrdersPackingProgress,
   ProcessStep,
+  syncListRanks,
   syncPackingCounters,
 } from "../../utils/ProcessQuantity.js";
 
@@ -160,6 +161,7 @@ export const deletePacking = async (req, res, next) => {
         embroidery_Id: packing.embroidery_Id,
         session,
       });
+      await syncListRanks({ embroidery_Id: packing.embroidery_Id, session });
     });
 
     return res

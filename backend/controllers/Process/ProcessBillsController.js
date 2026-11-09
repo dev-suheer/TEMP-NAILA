@@ -89,6 +89,7 @@ export const generateProcessBill = async (req, res, next) => {
               throw new Error("Bill has already been generated");
             } else {
               embData.bill_generated = true;
+              embData.bill_generated_at = new Date();
               if (additionalExpenditure > 0) {
                 embData.embAdditionalExpenditure = parseInt(
                   additionalExpenditure
@@ -105,6 +106,7 @@ export const generateProcessBill = async (req, res, next) => {
               throw new Error("Bill has already been generated");
             } else {
               calenderData.bill_generated = true;
+              calenderData.bill_generated_at = new Date();
               if (additionalExpenditure > 0) {
                 calenderData.additionalExpenditure = additionalExpenditure;
               }
@@ -119,6 +121,7 @@ export const generateProcessBill = async (req, res, next) => {
               throw new Error("Bill has already been generated");
             } else {
               cuttingData.bill_generated = true;
+              cuttingData.bill_generated_at = new Date();
               if (additionalExpenditure > 0) {
                 cuttingData.additionalExpenditure = additionalExpenditure;
               }
@@ -133,6 +136,7 @@ export const generateProcessBill = async (req, res, next) => {
               throw new Error("Bill has already been generated");
             } else {
               stoneData.bill_generated = true;
+              stoneData.bill_generated_at = new Date();
               if (additionalExpenditure > 0) {
                 stoneData.additionalExpenditure = additionalExpenditure;
               }
@@ -147,6 +151,7 @@ export const generateProcessBill = async (req, res, next) => {
               throw new Error("Bill has already been generated");
             } else {
               stitchingData.bill_generated = true;
+              stitchingData.bill_generated_at = new Date();
               if (additionalExpenditure > 0) {
                 stitchingData.additionalExpenditure = additionalExpenditure;
               }
@@ -301,6 +306,34 @@ export const getProcessillById = async (req, res, next) => {
     if (!ProcessBill) throw new Error("Process Bill Not Found");
     setMongoose();
     return res.status(200).json(ProcessBill);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const billAdditionalExpenditureSources = {
+  Embroidery: { model: EmbroideryModel, field: "embAdditionalExpenditure" },
+  Calender: { model: CalenderModel, field: "additionalExpenditure" },
+  Cutting: { model: CuttingModel, field: "additionalExpenditure" },
+  Stone: { model: StoneModel, field: "additionalExpenditure" },
+  Stitching: { model: StitchingModel, field: "additionalExpenditure" },
+};
+
+export const getLastAdditionalExpenditure = async (req, res, next) => {
+  try {
+    const { process_Category, design_no } = req.body;
+    const source = billAdditionalExpenditureSources[process_Category];
+    if (!source) throw new Error("Invalid process category");
+    if (!design_no) throw new Error("Design number required");
+
+    const lastBilled = await source.model
+      .findOne({ design_no: String(design_no), bill_generated: true, bill_generated_at: { $ne: null } })
+      .sort({ bill_generated_at: -1 })
+      .select(source.field)
+      .lean();
+    return res.status(200).json({
+      additionalExpenditure: lastBilled ? Number(lastBilled[source.field] || 0) : null,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -597,6 +630,7 @@ export const deleteBillAndProcessOrder = async (req, res, next) => {
           break;
       }
       if (!orderData) throw new CustomError("Order Data not found", 404);
+      orderData.bill_generated_at = null;
 
       //GETTING ACCOUNT DATA
       const oldAccountData = await processBillsModel

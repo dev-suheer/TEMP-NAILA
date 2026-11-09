@@ -12,6 +12,7 @@ import {
   getRecordsPackingLeft,
   loadPackingInfoSafely,
   ProcessStep,
+  syncListRanksSafely,
 } from "../../utils/ProcessQuantity.js";
 
 export const addStone = async (req, res, next) => {
@@ -109,6 +110,7 @@ export const addStone = async (req, res, next) => {
     //UPDATE MAIN EMBROIDERY NextStep
     mainEmbroidery.next_steps.stones = true;
     await mainEmbroidery.save();
+    await syncListRanksSafely(embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Added Successfully" });
@@ -134,7 +136,7 @@ export const getAllStone = async (req, res, next) => {
     const data = await StoneModel.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ list_rank: -1, createdAt: -1 });
 
     const total = await StoneModel.countDocuments(query);
     //WHAT IS LEFT AT EACH PACKED STONE, FOR ITS PACKING ICON. WORKED OUT FOR THIS PAGE ONLY
@@ -219,6 +221,7 @@ export const updateStone = async (req, res, next) => {
     }
 
     await stone.save();
+    await syncListRanksSafely(stone.embroidery_Id);
     return res
       .status(200)
       .json({ success: true, message: "Updated Successfully" });
@@ -249,6 +252,7 @@ export const deleteStone = async (req, res, next) => {
       embData.next_steps.stones = false;
       await embData.save();
     };
+    await syncListRanksSafely(data.embroidery_Id);
 
     return res
       .status(200)

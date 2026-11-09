@@ -83,11 +83,14 @@ const stoneSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    bill_generated_at : {
+      type: Date,
+      default: null
+    },
     updated : {
       type: Boolean,
       default: false
     },
-    //SUITS PACKED DIRECTLY FROM THIS STONE, KEPT BY syncPackingCounters
     packed_quantity: {
       type: Number,
       default: 0,
@@ -96,12 +99,19 @@ const stoneSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    list_rank: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 stoneSchema.index({ project_status: 1, createdAt: -1 });
 stoneSchema.index({ partyName: 1, createdAt: -1 });
+stoneSchema.index({ list_rank: -1, createdAt: -1 });
+stoneSchema.index({ project_status: 1, list_rank: -1, createdAt: -1 });
+stoneSchema.index({ partyName: 1, list_rank: -1, createdAt: -1 });
 stoneSchema.index({ date: -1 });
 stoneSchema.index({ embroidery_Id: 1 });
 stoneSchema.index({ design_no: 1, createdAt: -1 });

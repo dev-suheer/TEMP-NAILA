@@ -173,6 +173,10 @@ const embroiderySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    bill_generated_at: {
+      type: Date,
+      default: null,
+    },
     updated: {
       type: Boolean,
       default: false,
@@ -236,12 +240,19 @@ const embroiderySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    list_rank: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 embroiderySchema.index({ project_status: 1, createdAt: -1 });
 embroiderySchema.index({ partyName: 1, createdAt: -1 });
+embroiderySchema.index({ list_rank: -1, createdAt: -1 });
+embroiderySchema.index({ project_status: 1, list_rank: -1, createdAt: -1 });
+embroiderySchema.index({ partyName: 1, list_rank: -1, createdAt: -1 });
 embroiderySchema.index({ date: -1 });
 embroiderySchema.index({ design_no: 1 });
 embroiderySchema.index({ serial_No: 1 });

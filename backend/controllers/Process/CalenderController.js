@@ -123,7 +123,7 @@ export const getAllCalender = async (req, res, next) => {
     const data = await CalenderModel.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ project_status: -1, createdAt: -1 });
     const total = await CalenderModel.countDocuments(query);
     const response = {
       totalPages: Math.ceil(total / limit),

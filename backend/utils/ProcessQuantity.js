@@ -5,6 +5,7 @@ import { PackingModel } from "../models/Process/PackingModel.js";
 import { StitchingModel } from "../models/Process/StitchingModel.js";
 import { StoneModel } from "../models/Process/StoneModel.js";
 import { PackingStatus } from "../enums/PackingStatus.js";
+import { ListRank } from "../enums/ListRank.js";
 
 export const ProcessStep = {
   EMBROIDERY: "Embroidery",
@@ -528,13 +529,9 @@ const groupByOrder = (docs) => {
   return groups;
 };
 
-//PACKING PROGRESS OF WHOLE ORDERS, WORKED OUT IN MEMORY FROM 4 QUERIES (NOT PER ORDER), FOR LISTS AND THE ORDER MODAL
-//PACKED: EVERY STEP RECORD IS COMPLETED AND HAS NOTHING LEFT TO SEND ON. PARTIALLY PACKED: PACKING STARTED, NOT FINISHED
-//AN ORDER PACKED BEFORE PACKING RECORDS EXISTED, OR WITH A STEP WITHOUT A SOURCE LINK, CAN NOT BE WORKED OUT:
-//IT KEEPS THE OLD MEANING (PACKED WHEN IT HAS ANY PACKING) AND IS MARKED legacy
-//withRecords ADDS EACH STEP'S NUMBERS AND THE FULL PACKING ROUNDS, FOR THE MODAL
-export const getOrdersPackingProgress = async (orders, { session = null, withRecords = false } = {}) => {
-  if (!orders.length) return [];
+//THE STEP RECORDS AND PACKINGS OF EACH ORDER, AS { [step]: docs }, FROM 4 QUERIES FOR ALL THE ORDERS (NOT PER ORDER)
+//withRecords LOADS THE FULL PACKING ROUNDS (FOR THE MODAL), OTHERWISE ONLY WHAT THE NUMBERS NEED
+const loadOrdersChildren = async (orders, { session, withRecords }) => {
   const inOrders = { embroidery_Id: { $in: orders.map((order) => order._id) } };
   const packingQuery = PackingModel.find(inOrders).session(session);
   const [stepDocs, packings] = await Promise.all([
@@ -550,65 +547,156 @@ export const getOrdersPackingProgress = async (orders, { session = null, withRec
 
   return orders.map((order) => {
     const key = String(order._id);
-    const orderPackings = packingsByOrder.get(key) || [];
-    const children = {
-      [ProcessStep.PACKING]: orderPackings,
+    return {
+      [ProcessStep.PACKING]: packingsByOrder.get(key) || [],
       ...Object.fromEntries(
         orderStepModels.map(({ step }, index) => [step, stepsByOrder[index].get(key) || []])
       ),
     };
-    const records = [
-      { step: ProcessStep.EMBROIDERY, doc: order },
-      ...orderStepModels.flatMap(({ step }) => children[step].map((doc) => ({ step, doc }))),
-    ];
-    const legacy =
-      (!!order.next_steps?.packing && !order.packing_tracked) ||
-      records.some(({ step, doc }) => step !== ProcessStep.EMBROIDERY && hasNoSourceLink(doc));
-
-    const steps = legacy
-      ? []
-      : records.map(({ step, doc }) => {
-          const docsByTarget = allocationTargets.map((target) =>
-            children[target.step].filter((child) =>
-              isFromSource(child, { sourceStep: step, sourceId: doc._id, targetStep: target.step })
-            )
-          );
-          return {
-            step,
-            doc,
-            availability: toAvailability({ sourceStep: step, source: doc, allocated: getAllocation(docsByTarget) }),
-          };
-        });
-
-    const hasPacking = orderPackings.length > 0 || (legacy && !!order.next_steps?.packing);
-    const isDone = steps.every(
-      ({ doc, availability }) => doc.project_status === "Completed" && availability.available <= 0
-    );
-    const progress = {
-      packing_status: !hasPacking
-        ? PackingStatus.NOT_PACKED
-        : legacy || isDone
-          ? PackingStatus.PACKED
-          : PackingStatus.PARTIALLY_PACKED,
-      legacy,
-      ...getOrderPackingValues(orderPackings),
-    };
-    if (!withRecords) return progress;
-
-    return {
-      ...progress,
-      steps: steps.map(({ step, doc, availability }) => ({
-        step,
-        id: String(doc._id),
-        partyName: doc.partyName,
-        project_status: doc.project_status,
-        received: availability.capacity,
-        packed: availability.byStep[ProcessStep.PACKING] || 0,
-        available: availability.available,
-      })),
-      packings: [...orderPackings].sort((a, b) => a.createdAt - b.createdAt),
-    };
   });
+};
+
+//AVAILABILITY OF ONE RECORD OF AN ORDER, FROM THE ORDER'S LOADED NEXT-STEP RECORDS
+const getLoadedAvailability = ({ step, doc }, children) => {
+  const docsByTarget = allocationTargets.map((target) =>
+    children[target.step].filter((child) =>
+      isFromSource(child, { sourceStep: step, sourceId: doc._id, targetStep: target.step })
+    )
+  );
+  return toAvailability({ sourceStep: step, source: doc, allocated: getAllocation(docsByTarget) });
+};
+
+//PACKING PROGRESS OF ONE ORDER FROM ITS LOADED RECORDS (loadOrdersChildren). PURE
+const toOrderPackingProgress = (order, children, withRecords) => {
+  const orderPackings = children[ProcessStep.PACKING];
+  const records = [
+    { step: ProcessStep.EMBROIDERY, doc: order },
+    ...orderStepModels.flatMap(({ step }) => children[step].map((doc) => ({ step, doc }))),
+  ];
+  const legacy =
+    (!!order.next_steps?.packing && !order.packing_tracked) ||
+    records.some(({ step, doc }) => step !== ProcessStep.EMBROIDERY && hasNoSourceLink(doc));
+
+  const steps = legacy
+    ? []
+    : records.map((record) => ({ ...record, availability: getLoadedAvailability(record, children) }));
+
+  const hasPacking = orderPackings.length > 0 || (legacy && !!order.next_steps?.packing);
+  const isDone = steps.every(
+    ({ doc, availability }) => doc.project_status === "Completed" && availability.available <= 0
+  );
+  const progress = {
+    packing_status: !hasPacking
+      ? PackingStatus.NOT_PACKED
+      : legacy || isDone
+        ? PackingStatus.PACKED
+        : PackingStatus.PARTIALLY_PACKED,
+    legacy,
+    ...getOrderPackingValues(orderPackings),
+  };
+  if (!withRecords) return progress;
+
+  return {
+    ...progress,
+    steps: steps.map(({ step, doc, availability }) => ({
+      step,
+      id: String(doc._id),
+      partyName: doc.partyName,
+      project_status: doc.project_status,
+      received: availability.capacity,
+      packed: availability.byStep[ProcessStep.PACKING] || 0,
+      available: availability.available,
+    })),
+    packings: [...orderPackings].sort((a, b) => a.createdAt - b.createdAt),
+  };
+};
+
+//PACKING PROGRESS OF WHOLE ORDERS, WORKED OUT IN MEMORY FROM 4 QUERIES (NOT PER ORDER), FOR LISTS AND THE ORDER MODAL
+//PACKED: EVERY STEP RECORD IS COMPLETED AND HAS NOTHING LEFT TO SEND ON. PARTIALLY PACKED: PACKING STARTED, NOT FINISHED
+//AN ORDER PACKED BEFORE PACKING RECORDS EXISTED, OR WITH A STEP WITHOUT A SOURCE LINK, CAN NOT BE WORKED OUT:
+//IT KEEPS THE OLD MEANING (PACKED WHEN IT HAS ANY PACKING) AND IS MARKED legacy
+//withRecords ADDS EACH STEP'S NUMBERS AND THE FULL PACKING ROUNDS, FOR THE MODAL
+export const getOrdersPackingProgress = async (orders, { session = null, withRecords = false } = {}) => {
+  if (!orders.length) return [];
+  const ordersChildren = await loadOrdersChildren(orders, { session, withRecords });
+  return orders.map((order, index) => toOrderPackingProgress(order, ordersChildren[index], withRecords));
+};
+
+//LIST RANK OF AN ORDER (enums/ListRank.js): ITS WHOLE-ORDER PACKING STATUS, THEN ITS STATUS AND VERIFIED TICK
+const getOrderListRank = (order, packingStatus) => {
+  if (packingStatus === PackingStatus.PACKED) return ListRank.DONE;
+  if (packingStatus === PackingStatus.PARTIALLY_PACKED) return ListRank.PACKING_STARTED;
+  if (order.project_status === "Completed") {
+    return order.is_verified ? ListRank.COMPLETED_VERIFIED : ListRank.COMPLETED;
+  }
+  return order.is_verified ? ListRank.PENDING_VERIFIED : ListRank.PENDING;
+};
+
+//LIST RANK OF A CUTTING / STONE / STITCHING. DONE: COMPLETED WITH NOTHING LEFT HERE, WHETHER PACKED OR SENT ON
+//IN AN ORDER THAT CAN NOT BE WORKED OUT (legacy) WHAT IS LEFT IS UNKNOWN, SO EVERY COMPLETED RECORD IN IT IS DONE
+const getStepListRank = (doc, availability, legacy) => {
+  const isCompleted = doc.project_status === "Completed";
+  if (isCompleted && (legacy || availability.available <= 0)) return ListRank.DONE;
+  if ((availability.byStep[ProcessStep.PACKING] || 0) > 0) return ListRank.PACKING_STARTED;
+  return isCompleted ? ListRank.COMPLETED : ListRank.PENDING;
+};
+
+const listRankModels = [{ step: ProcessStep.EMBROIDERY, model: EmbroideryModel }, ...orderStepModels];
+
+//THE LIST RANKS OF THESE ORDERS AND ALL THEIR CUTTING / STONE / STITCHING RECORDS THAT DIFFER FROM WHAT IS STORED,
+//AS BULK WRITE OPERATIONS PER MODEL. ONE LOAD FOR ALL THE ORDERS, SO THE BACKFILL CAN PASS MANY AT ONCE
+export const getListRankUpdates = async (orders, { session = null } = {}) => {
+  const updates = listRankModels.map(({ step, model }) => ({ step, model, operations: [] }));
+  if (!orders.length) return updates;
+  const operationsByStep = Object.fromEntries(updates.map(({ step, operations }) => [step, operations]));
+  const setRank = (step, doc, rank) => {
+    if (doc.list_rank === rank) return;
+    operationsByStep[step].push({
+      updateOne: { filter: { _id: doc._id }, update: { $set: { list_rank: rank } } },
+    });
+  };
+
+  const ordersChildren = await loadOrdersChildren(orders, { session, withRecords: false });
+  orders.forEach((order, index) => {
+    const children = ordersChildren[index];
+    const { packing_status, legacy } = toOrderPackingProgress(order, children, false);
+    setRank(ProcessStep.EMBROIDERY, order, getOrderListRank(order, packing_status));
+    orderStepModels.forEach(({ step }) =>
+      children[step].forEach((doc) =>
+        setRank(step, doc, getStepListRank(doc, getLoadedAvailability({ step, doc }, children), legacy))
+      )
+    );
+  });
+  return updates;
+};
+
+//THE DRIVER'S bulkWrite, SO A CHANGE OF POSITION DOES NOT TOUCH updatedAt
+export const writeListRankUpdates = async (updates, session = null) => {
+  for (const { model, operations } of updates) {
+    if (operations.length) {
+      await model.collection.bulkWrite(operations, { ordered: false, ...(session && { session }) });
+    }
+  }
+};
+
+//RECALCULATES WHERE AN ORDER AND ITS CUTTING / STONE / STITCHING RECORDS SHOW IN THEIR LISTS
+//CALLED AFTER EVERY SAVE THAT CAN MOVE ONE: STATUS, RECEIVED QUANTITY, VERIFIED TICK, NEXT STEPS AND PACKING
+export const syncListRanks = async ({ embroidery_Id, session = null }) => {
+  if (!embroidery_Id) return;
+  const order = await EmbroideryModel.findById(embroidery_Id).lean().session(session);
+  if (!order) return;
+  await writeListRankUpdates(await getListRankUpdates([order], { session }), session);
+};
+
+//FOR SAVES THAT ARE NOT IN A TRANSACTION: THE SAVE HAS ALREADY HAPPENED, SO A FAILURE HERE IS ONLY LOGGED
+//(FAILING THE REQUEST WOULD INVITE A RETRY THAT SAVES IT TWICE). THE NEXT CHANGE IN THE ORDER, OR
+//RUNNING scripts/backfillListRanks.js AGAIN, PUTS THE POSITION RIGHT
+export const syncListRanksSafely = async (embroidery_Id) => {
+  try {
+    await syncListRanks({ embroidery_Id });
+  } catch (error) {
+    console.error("List position could not be updated:", error.message);
+  }
 };
 
 //WHAT IS STILL LEFT AT EACH LISTED CUTTING / STONE (NOT SENT TO A NEXT STEP OR PACKED), FOR ITS PACKING ICON

@@ -13,6 +13,7 @@ import {
   calenderDataBypartyNameAsync,
   createCalender,
 } from "../../../features/CalenderSlice";
+import { getLastAdditionalExpenditureAsync } from "../../../features/ProcessBillSlice";
 import ConfirmationModal from "../../../Component/Modal/ConfirmationModal";
 import PictureOrderModal from "../../../Component/Embodiary/PictureOrderModal";
 import ProcessBillModal from "../../../Component/Modal/ProcessBillModal";
@@ -324,8 +325,14 @@ const EmbroideryDetails = () => {
     });
   };
 
+  //THE FORM STARTS WITH THE LAST BILLED ADDITIONAL COST FOR THIS DESIGN, KEPT HERE TOO SO IT IS SENT EVEN IF NOT TYPED OVER
   const openGenerateBillForm = () => {
-    setProcessBillModal(true);
+    dispatch(
+      getLastAdditionalExpenditureAsync({ process_Category: "Embroidery", design_no: SingleEmbroidery?.design_no })
+    ).then(({ payload }) => {
+      setProcessBillData({ Manual_No: SingleEmbroidery?.Manual_No, additionalExpenditure: payload ?? "" });
+      setProcessBillModal(true);
+    });
   };
 
   const closeBillModal = () => {
@@ -1111,6 +1118,7 @@ const EmbroideryDetails = () => {
             loading={generateBillLoading}
             closeModal={closeBillModal}
             Manual_No={SingleEmbroidery.Manual_No}
+            additionalExpenditure={processBillData.additionalExpenditure}
             processBillAmount={Math.round(
               SingleEmbroidery?.per_suit * SingleEmbroidery?.T_Recieved_Suit,
             )}

@@ -9,6 +9,7 @@ import {
   Updatecuttingasync,
 } from "../../../features/CuttingSlice";
 import { GETEmbroiderySIngle } from "../../../features/EmbroiderySlice";
+import { getLastAdditionalExpenditureAsync } from "../../../features/ProcessBillSlice";
 import { FiPlus } from "react-icons/fi";
 import {
   createStone,
@@ -420,8 +421,14 @@ const CuttingDetails = () => {
     });
   };
 
+  //THE FORM STARTS WITH THE LAST BILLED ADDITIONAL COST FOR THIS DESIGN, KEPT HERE TOO SO IT IS SENT EVEN IF NOT TYPED OVER
   const openGenerateBillForm = () => {
-    setProcessBillModal(true);
+    dispatch(
+      getLastAdditionalExpenditureAsync({ process_Category: "Cutting", design_no: SingleCutting?.design_no })
+    ).then(({ payload }) => {
+      setProcessBillData({ Manual_No: SingleCutting?.Manual_No, additionalExpenditure: payload ?? "" });
+      setProcessBillModal(true);
+    });
   };
 
   const closeBillModal = () => {
@@ -1043,6 +1050,7 @@ const CuttingDetails = () => {
             loading={generateCuttingBillLoading}
             closeModal={closeBillModal}
             Manual_No={SingleCutting.Manual_No}
+            additionalExpenditure={processBillData.additionalExpenditure}
             processBillAmount={Math.round(
               SingleCutting?.rate * SingleCutting?.r_quantity
             )}
